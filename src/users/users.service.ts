@@ -42,6 +42,12 @@ export class UsersService {
     password: false,
   };
 
+  async findRoleByName(name: string) {
+    return this.prisma.role.findUnique({
+      where: { name },
+    });
+  }
+
   async findByUsername(user_name: string) {
     return this.prisma.user.findUnique({
       where: { user_name },

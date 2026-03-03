@@ -21,10 +21,6 @@ export class RegisterDto {
   @MinLength(6)
   password: string;
 
-  @IsNotEmpty()
-  @IsUUID()
-  role_id: string;
-
   @IsOptional()
   @IsUUID()
   hospital_id?: string;

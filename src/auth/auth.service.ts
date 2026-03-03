@@ -15,7 +15,16 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const user = await this.usersService.create(dto);
+    // Find the default 'USER' role
+    const userRole = await this.usersService.findRoleByName('USER');
+    if (!userRole) {
+      throw new Error('Default USER role not found in database. Please run seed.');
+    }
+
+    const user = await this.usersService.create({
+      ...dto,
+      role_id: userRole.id,
+    });
 
     return {
       message: 'User registered successfully',
