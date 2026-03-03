@@ -14,10 +14,10 @@
 
 ### 🚀 Getting Started for the Team
 
-1. **Switch to RBAC Branch:**
+1. **Pull the latest changes from `dev` branch:**
    ```bash
-   git checkout feat/auth-rbac-update
-   git pull origin feat/auth-rbac-update
+   git checkout dev
+   git pull origin dev
    ```
 
 2. **Sync Database:**
