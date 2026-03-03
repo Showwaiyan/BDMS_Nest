@@ -27,11 +27,11 @@ async function main() {
     // Donations (Actual blood units)
     'donation.access', 'donation.create', 'donation.update', 'donation.delete', 'donation.view',
     // Blood Requests
-    'request.access', 'request.create', 'request.update', 'request.view',
+    'request.access', 'request.create', 'request.update', 'request.view', 'request.delete',
     // Appointments
     'appointment.access', 'appointment.create', 'appointment.update', 'appointment.delete', 'appointment.view',
     // Medical Records
-    'medical.access', 'medical.create', 'medical.update'
+    'medical.access', 'medical.create', 'medical.update', 'medical.view', 'medical.delete'
   ];
 
   // Create Roles
@@ -76,7 +76,7 @@ async function main() {
       'donation.access', 'donation.view', 'donation.update',
       'request.access', 'request.view', 'request.update',
       'appointment.access', 'appointment.view', 'appointment.update',
-      'medical.access', 'medical.create', 'medical.update'
+      'medical.access', 'medical.create', 'medical.update', 'medical.view'
     ];
     for (const permName of staffPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
