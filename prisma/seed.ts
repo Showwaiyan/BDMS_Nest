@@ -91,9 +91,10 @@ async function main() {
   }
 
   if (userRole) {
-    // Only basic permissions for USER (cannot create donation/request yet)
+    // Only basic permissions for USER (cannot create donation yet, but can request)
     const userPerms = [
-      'donor.create', 'donor.view', 'user.view', 'appointment.view', 'donation.view'
+      'donor.create', 'donor.view', 'user.view', 'appointment.view', 'donation.view',
+      'request.create', 'request.view'
     ];
     for (const permName of userPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
