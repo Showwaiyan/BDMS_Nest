@@ -12,9 +12,17 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🌱 Starting seed...\n');
 
-  console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating roles...');
+  console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating roles and permissions...');
 
   const roles = ['ADMIN', 'STAFF', 'USER'];
+  const permissions = [
+    'donation.approve',
+    'donation.create',
+    'inventory.view',
+    'user.manage'
+  ];
+
+  // Create Roles
   for (const roleName of roles) {
     await prisma.role.upsert({
       where: { name: roleName },
@@ -23,10 +31,50 @@ async function main() {
     });
   }
 
+  // Create Permissions
+  for (const permName of permissions) {
+    await prisma.permission.upsert({
+      where: { name: permName },
+      update: {},
+      create: { name: permName },
+    });
+  }
+
   const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+  const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
   const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
-  console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating admin and user accounts...');
+  // Link Permissions (The "Proof" of role_permission table)
+  if (adminRole) {
+    // Admin gets everything
+    for (const permName of permissions) {
+      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      if (perm) {
+        await prisma.rolePermission.upsert({
+          where: { role_id_permission_id: { role_id: adminRole.id, permission_id: perm.id } },
+          update: {},
+          create: { role_id: adminRole.id, permission_id: perm.id },
+        });
+      }
+    }
+  }
+
+  if (staffRole) {
+    // Staff can approve donations and view inventory
+    const staffPerms = ['donation.approve', 'inventory.view'];
+    for (const permName of staffPerms) {
+      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      if (perm) {
+        await prisma.rolePermission.upsert({
+          where: { role_id_permission_id: { role_id: staffRole.id, permission_id: perm.id } },
+          update: {},
+          create: { role_id: staffRole.id, permission_id: perm.id },
+        });
+      }
+    }
+  }
+
+  console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating accounts...');
 
   const passwordAdmin = await bcrypt.hash('admin123', 10);
   const passwordUser = await bcrypt.hash('user123', 10);
