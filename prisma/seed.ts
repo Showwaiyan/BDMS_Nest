@@ -22,16 +22,22 @@ async function main() {
     'role.access', 'role.create', 'role.update', 'role.delete', 'role.view',
     // Permissions
     'permission.access', 'permission.create', 'permission.update', 'permission.delete', 'permission.view',
-    // Donors (Profiles/Applications)
+    // Donors
     'donor.access', 'donor.create', 'donor.update', 'donor.delete', 'donor.view',
-    // Donations (Actual blood units)
+    // Donations
     'donation.access', 'donation.create', 'donation.update', 'donation.delete', 'donation.view',
     // Blood Requests
     'request.access', 'request.create', 'request.update', 'request.view', 'request.delete',
     // Appointments
     'appointment.access', 'appointment.create', 'appointment.update', 'appointment.delete', 'appointment.view',
     // Medical Records
-    'medical.access', 'medical.create', 'medical.update', 'medical.view', 'medical.delete'
+    'medical.access', 'medical.create', 'medical.update', 'medical.view', 'medical.delete',
+    // Announcements
+    'announcement.access', 'announcement.create', 'announcement.update', 'announcement.delete', 'announcement.view',
+    // Inventory
+    'inventory.access', 'inventory.create', 'inventory.update', 'inventory.delete', 'inventory.view', 'inventory.manage',
+    // Certificates
+    'certificate.access', 'certificate.create', 'certificate.update', 'certificate.delete', 'certificate.view', 'certificate.issue'
   ];
 
   // Create Roles
@@ -76,7 +82,10 @@ async function main() {
       'donation.access', 'donation.view', 'donation.update',
       'request.access', 'request.view', 'request.update',
       'appointment.access', 'appointment.view', 'appointment.update',
-      'medical.access', 'medical.create', 'medical.update', 'medical.view'
+      'medical.access', 'medical.create', 'medical.update', 'medical.view',
+      'announcement.access', 'announcement.view', 'announcement.update',
+      'inventory.access', 'inventory.view', 'inventory.manage',
+      'certificate.access', 'certificate.view', 'certificate.issue'
     ];
     for (const permName of staffPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
@@ -91,10 +100,9 @@ async function main() {
   }
 
   if (userRole) {
-    // Only basic permissions for USER (cannot create donation yet, but can request)
     const userPerms = [
       'donor.create', 'donor.view', 'user.view', 'appointment.view', 'donation.view',
-      'request.create', 'request.view'
+      'request.create', 'request.view', 'announcement.view', 'certificate.view'
     ];
     for (const permName of userPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
