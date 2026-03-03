@@ -14,7 +14,7 @@ async function main() {
 
   console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating roles and permissions...');
 
-  const roles = ['ADMIN', 'STAFF', 'DONOR', 'USER'];
+  const roles = ['ADMIN', 'STAFF', 'USER'];
   const permissions = [
     // Users
     'user.access', 'user.create', 'user.update', 'user.delete', 'user.view',
@@ -54,7 +54,6 @@ async function main() {
 
   const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
   const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
-  const donorRole = await prisma.role.findUnique({ where: { name: 'DONOR' } });
   const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
   // Link Permissions
@@ -91,28 +90,10 @@ async function main() {
     }
   }
 
-  if (donorRole) {
-    const donorPerms = [
-      'donation.create', 'donation.view',
-      'request.create', 'request.view',
-      'appointment.create', 'appointment.view',
-      'donor.view', 'donor.update'
-    ];
-    for (const permName of donorPerms) {
-      const perm = await prisma.permission.findUnique({ where: { name: permName } });
-      if (perm) {
-        await prisma.rolePermission.upsert({
-          where: { role_id_permission_id: { role_id: donorRole.id, permission_id: perm.id } },
-          update: {},
-          create: { role_id: donorRole.id, permission_id: perm.id },
-        });
-      }
-    }
-  }
-
   if (userRole) {
+    // Only basic permissions for USER (cannot create donation/request yet)
     const userPerms = [
-      'donor.create', 'donor.view', 'user.view'
+      'donor.create', 'donor.view', 'user.view', 'appointment.view', 'donation.view'
     ];
     for (const permName of userPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
