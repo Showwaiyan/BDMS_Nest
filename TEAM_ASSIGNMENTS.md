@@ -34,7 +34,7 @@ export class YourController {
   create(@Body() dto: CreateDto) { ... }
 
   @Get()
-  @Permissions('module.access', 'module.view')
+  @Permissions('module.access')
   findAll() { ... }
 
   @Patch(':id')
