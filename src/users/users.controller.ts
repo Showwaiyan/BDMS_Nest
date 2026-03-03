@@ -13,19 +13,21 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Role } from 'prisma/generated/enums';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Roles } from 'src/auth/decorators/roles.decortor';
+import { Permissions } from 'src/auth/decorators/permissions.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // admin only
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
+  @Permissions('user.manage')
   @Get()
   findAll(@Query() dto: PaginationDto) {
     return this.usersService.findAll(dto);
@@ -39,7 +41,8 @@ export class UsersController {
 
   // admin only
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
+  @Permissions('user.manage')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -56,7 +59,8 @@ export class UsersController {
 
   // admin only
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
+  @Permissions('user.manage')
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
@@ -64,7 +68,8 @@ export class UsersController {
 
   // admin only
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
+  @Permissions('user.manage')
   @Patch(':id/toggle-active')
   toggleActive(@Param('id') id: string) {
     return this.usersService.toggleActive(id);
@@ -72,7 +77,8 @@ export class UsersController {
 
   // admin only
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles('ADMIN')
+  @Permissions('user.manage')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

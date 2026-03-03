@@ -24,7 +24,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByUsername(dto.user_name);
+    const user = (await this.usersService.findByUsername(dto.user_name)) as any;
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -43,7 +43,8 @@ export class AuthService {
     const tokens = await this.generateTokens(
       user.id,
       user.user_name,
-      user.role,
+      user.role.name,
+      user.role.role_permissions.map((rp) => rp.permission.name),
     );
 
     // TODO: May Be: set refresh token in httpOnly cookie instead of returning in response body
@@ -52,9 +53,10 @@ export class AuthService {
       data: {
         user: {
           id: user.id,
-          full_name: user.full_name,
           user_name: user.user_name,
-          role: user.role,
+          email: user.email,
+          role: user.role.name,
+          permissions: user.role.role_permissions.map((rp) => rp.permission.name),
         },
         ...tokens,
       },
@@ -62,12 +64,13 @@ export class AuthService {
   }
 
   async refreshToken(userId: string) {
-    const user = await this.usersService.findById(userId);
+    const user = (await this.usersService.findById(userId)) as any;
 
     const tokens = await this.generateTokens(
       user.id,
       user.user_name,
-      user.role,
+      user.role.name,
+      user.role.role_permissions.map((rp: any) => rp.permission.name),
     );
 
     return {
@@ -84,8 +87,9 @@ export class AuthService {
     userId: string,
     user_name: string,
     role: string,
+    permissions: string[],
   ) {
-    const payload = { sub: userId, user_name, role };
+    const payload = { sub: userId, user_name, role, permissions };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {
