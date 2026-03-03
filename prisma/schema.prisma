@@ -1,153 +1,310 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "./generated"
-  moduleFormat    = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  ADMIN
-  USER
+// --- Enums ---
+
+enum BloodGroup {
+  A_POS  @map("A+")
+  A_NEG  @map("A-")
+  B_POS  @map("B+")
+  B_NEG  @map("B-")
+  AB_POS @map("AB+")
+  AB_NEG @map("AB-")
+  O_POS  @map("O+")
+  O_NEG  @map("O-")
 }
 
-enum BloodType {
-  A_POS
-  A_NEG
-  B_POS
-  B_NEG
-  AB_POS
-  AB_NEG
-  O_POS
-  O_NEG
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum DonationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FAILED
-  COMPLETED
+  pending
+  cancelled
+  approved
+  screening
+  rejected
+  completed
 }
 
 enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FAILED
-  COMPLETED
+  pending
+  cancelled
+  approved
+  rejected
+  fulfilled
+}
+
+enum UrgencyLevel {
+  low
+  medium
+  high
+  critical
 }
 
 enum AppointmentStatus {
-  PENDING
-  CANCELLED
-  FAILED
-  COMPLETED
+  scheduled
+  confirmed
+  cancelled
+  completed
 }
 
-enum AppointmentType {
-  DONATION
-  REQUEST
-}
-
-enum CertificateType {
-  FIRST_TIMER
-  GALLON
-  EMERGENCY
+enum InventoryStatus {
+  available
+  used
+  expired
 }
 
 enum TestResult {
-  POSITIVE
-  NEGATIVE
-  PENDING
+  positive
+  negative
+  inconclusive
+}
+
+enum ScreeningStatus {
+  pending
+  failed
+  passed
+}
+
+// --- Models ---
+
+model Hospital {
+  id         String   @id @default(uuid())
+  name       String
+  address    String
+  phone      String   @unique
+  email      String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+
+  users             User[]
+  donations         Donation[]
+  blood_requests    BloodRequest[]
+  blood_inventories BloodInventory[]
+  appointments      Appointment[]
+  medical_records   MedicalRecord[]
+}
+
+model Role {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users            User[]
+  role_permissions RolePermission[]
+}
+
+model Permission {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  role_permissions RolePermission[]
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+
+  role       Role       @relation(fields: [role_id], references: [id])
+  permission Permission @relation(fields: [permission_id], references: [id])
+
+  @@id([role_id, permission_id])
 }
 
 model User {
+  id          String   @id @default(uuid())
+  role_id     String
+  hospital_id String?
+  user_name   String
+  email       String   @unique
+  password    String
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  deleted_at  DateTime?
+
+  role     Role      @relation(fields: [role_id], references: [id])
+  hospital Hospital? @relation(fields: [hospital_id], references: [id])
+
+  donor           Donor?
+  donations       Donation[]     @relation("DonationCreator")
+  approved_donations Donation[]  @relation("DonationApprover")
+  blood_requests  BloodRequest[] @relation("RequestCreator")
+  approved_requests BloodRequest[] @relation("RequestApprover")
+  appointments    Appointment[]
+  certificates    Certificate[]
+  screened_records MedicalRecord[]
+}
+
+model Donor {
   id                 String     @id @default(uuid())
-  full_name          String
-  user_name          String     @unique
-  password           String
-  phone_number       String?
-  blood_type         BloodType?
-  address            String?
-  role               Role       @default(USER)
+  user_id            String     @unique
+  nrc_no             String     @unique
+  date_of_birth      DateTime
+  gender             Gender
+  blood_group        BloodGroup
+  weight             Decimal
   last_donation_date DateTime?
+  remarks            String?
+  emergency_contact  String
+  emergency_phone    String
+  address            String
   is_active          Boolean    @default(true)
   created_at         DateTime   @default(now())
   updated_at         DateTime   @updatedAt
+  deleted_at         DateTime?
 
-  donations         Donation[]    @relation("DonorDonations")
-  approvedDonations Donation[]    @relation("ApprovedDonations")
-  requests          Request[]     @relation("UserRequests")
-  approvedRequests  Request[]     @relation("ApprovedRequests")
-  appointments      Appointment[]
-  certificates      Certificate[]
+  user User @relation(fields: [user_id], references: [id])
 }
 
 model Donation {
-  id            String         @id @default(uuid())
-  user_id       String
-  donation_code String         @unique
-  status        DonationStatus @default(PENDING)
-  donation_date DateTime
-  approved_by   String?
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
+  id                String         @id @default(uuid())
+  donor_id          String
+  hospital_id       String
+  blood_request_id  String?
+  created_by        String
+  donation_code     String?
+  blood_group       BloodGroup
+  units_donated     Int?
+  donation_date     DateTime
+  status            DonationStatus @default(pending)
+  approved_by       String?
+  approved_at       DateTime?
+  remarks           String?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+  deleted_at        DateTime?
 
-  user         User          @relation("DonorDonations", fields: [user_id], references: [id])
-  approver     User?         @relation("ApprovedDonations", fields: [approved_by], references: [id])
-  appointments Appointment[]
+  donor         Donor         @relation(fields: [donor_id], references: [id])
+  hospital      Hospital      @relation(fields: [hospital_id], references: [id])
+  blood_request BloodRequest? @relation(fields: [blood_request_id], references: [id])
+  creator       User          @relation("DonationCreator", fields: [created_by], references: [id])
+  approver      User?         @relation("DonationApprover", fields: [approved_by], references: [id])
+
+  medical_record MedicalRecord?
+  inventory      BloodInventory?
+  appointments   Appointment[]
 }
 
-model Request {
-  id           String        @id @default(uuid())
-  user_id      String
-  request_code String        @unique
-  blood_type   BloodType
-  status       RequestStatus @default(PENDING)
-  units_needed Int
-  request_date DateTime
-  approved_by  String?
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt
+model BloodRequest {
+  id                 String        @id @default(uuid())
+  user_id            String
+  hospital_id        String
+  blood_request_code String?
+  patient_name       String
+  blood_group        BloodGroup
+  units_required     Int
+  contact_phone      String
+  urgency            UrgencyLevel
+  required_date      DateTime
+  status             RequestStatus @default(pending)
+  reason             String
+  approved_by        String?
+  approved_at        DateTime?
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
+  deleted_at         DateTime?
 
-  user         User          @relation("UserRequests", fields: [user_id], references: [id])
-  approver     User?         @relation("ApprovedRequests", fields: [approved_by], references: [id])
-  appointments Appointment[]
+  user      User      @relation("RequestCreator", fields: [user_id], references: [id])
+  hospital  Hospital  @relation(fields: [hospital_id], references: [id])
+  approver  User?     @relation("RequestApprover", fields: [approved_by], references: [id])
+
+  donations         Donation[]
+  blood_inventories BloodInventory[]
+  appointments      Appointment[]
 }
 
 model Appointment {
   id               String            @id @default(uuid())
   user_id          String
-  request_id       String?
+  hospital_id      String
   donation_id      String?
-  appointment_type AppointmentType
+  blood_request_id String?
   appointment_date DateTime
-  status           AppointmentStatus @default(PENDING)
+  appointment_time DateTime          @db.Time
+  status           AppointmentStatus @default(scheduled)
+  remarks          String?
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
+  deleted_at       DateTime?
 
-  user           User           @relation(fields: [user_id], references: [id])
-  request        Request?       @relation(fields: [request_id], references: [id])
-  donation       Donation?      @relation(fields: [donation_id], references: [id])
-  medical_record MedicalRecord?
+  user          User          @relation(fields: [user_id], references: [id])
+  hospital      Hospital      @relation(fields: [hospital_id], references: [id])
+  donation      Donation?     @relation(fields: [donation_id], references: [id])
+  blood_request BloodRequest? @relation(fields: [blood_request_id], references: [id])
+}
+
+model MedicalRecord {
+  id                 String          @id @default(uuid())
+  donation_id        String          @unique
+  hospital_id        String
+  hemoglobin_level   Decimal         @db.Decimal(4, 2)
+  hiv_result         TestResult
+  hepatitis_b_result TestResult
+  hepatitis_c_result TestResult
+  malaria_result     TestResult
+  syphilis_result    TestResult
+  blood_group        BloodGroup
+  screening_status   ScreeningStatus @default(pending)
+  screening_notes    String?
+  screened_by        String
+  screening_at       DateTime
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+  deleted_at         DateTime?
+
+  donation Donation @relation(fields: [donation_id], references: [id])
+  hospital Hospital @relation(fields: [hospital_id], references: [id])
+  screener User     @relation(fields: [screened_by], references: [id])
 }
 
 model BloodInventory {
-  id              String    @id @default(uuid())
-  blood_type      BloodType @unique
-  units_available Int       @default(0)
-  last_updated    DateTime  @updatedAt
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  id               String          @id @default(uuid())
+  donation_id      String          @unique
+  hospital_id      String
+  blood_group      BloodGroup
+  units            Int
+  collected_at     DateTime
+  expired_at       DateTime
+  status           InventoryStatus @default(available)
+  blood_request_id String?
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  deleted_at       DateTime?
+
+  donation      Donation      @relation(fields: [donation_id], references: [id])
+  hospital      Hospital      @relation(fields: [hospital_id], references: [id])
+  blood_request BloodRequest? @relation(fields: [blood_request_id], references: [id])
+}
+
+model Certificate {
+  id                      String   @id @default(uuid())
+  user_id                 String
+  certificate_title       String
+  certificate_description String
+  certificate_date        DateTime
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  deleted_at              DateTime?
+
+  user User @relation(fields: [user_id], references: [id])
 }
 
 model Announcement {
@@ -158,35 +315,4 @@ model Announcement {
   expired_at DateTime?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
-}
-
-model MedicalRecord {
-  id                 String     @id @default(uuid())
-  appointment_id     String     @unique
-  blood_group        String?
-  hemoglobin         String?
-  hiv                Boolean?
-  hepatitis_b        String?
-  hepatitis_c        TestResult @default(PENDING)
-  syphilis           String?
-  malaria            TestResult @default(PENDING)
-  last_donation_date DateTime?
-  is_active          Boolean    @default(true)
-  created_at         DateTime   @default(now())
-  updated_at         DateTime   @updatedAt
-
-  appointment Appointment @relation(fields: [appointment_id], references: [id])
-}
-
-model Certificate {
-  id                      String          @id @default(uuid())
-  user_id                 String
-  type                    CertificateType
-  certificate_title       String
-  certificate_description String
-  certificate_date        DateTime
-  created_at              DateTime        @default(now())
-  updated_at              DateTime        @updatedAt
-
-  user User @relation(fields: [user_id], references: [id])
 }
