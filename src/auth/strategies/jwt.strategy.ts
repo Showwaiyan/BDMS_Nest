@@ -24,6 +24,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     role: string;
     permissions: string[];
   }): Promise<RequestedUser> {
+    const user = await this.databaseService.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        is_active: true,
+      },
+    });
+
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
     return {
       id: payload.sub,
       user_name: payload.user_name,
