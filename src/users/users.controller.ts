@@ -27,7 +27,7 @@ export class UsersController {
   // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Permissions('user.manage')
+  @Permissions('user.access')
   @Get()
   findAll(@Query() dto: PaginationDto) {
     return this.usersService.findAll(dto);
@@ -42,7 +42,7 @@ export class UsersController {
   // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Permissions('user.manage')
+  @Permissions('user.view')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -57,19 +57,28 @@ export class UsersController {
     return this.usersService.update(user.id, dto);
   }
 
-  // admin only
+  // admin only - general update (excludes role)
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Permissions('user.manage')
+  @Permissions('user.update')
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 
+  // admin only - dedicated role update
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Permissions('role.update')
+  @Patch(':id/role')
+  updateRole(@Param('id') id: string, @Body('role_id') role_id: string) {
+    return this.usersService.update(id, { role_id } as any);
+  }
+
   // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Permissions('user.manage')
+  @Permissions('user.update')
   @Patch(':id/toggle-active')
   toggleActive(@Param('id') id: string) {
     return this.usersService.toggleActive(id);
@@ -78,7 +87,7 @@ export class UsersController {
   // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Permissions('user.manage')
+  @Permissions('user.delete')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
