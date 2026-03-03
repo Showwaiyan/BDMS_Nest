@@ -68,7 +68,17 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: this.selectUser,
+      include: {
+        role: {
+          include: {
+            role_permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {

@@ -75,13 +75,13 @@ export class AuthService {
   }
 
   async refreshToken(userId: string) {
-    const user = (await this.usersService.findById(userId)) as any;
+    const user = await this.usersService.findById(userId);
 
     const tokens = await this.generateTokens(
       user.id,
       user.user_name,
       user.role.name,
-      user.role.role_permissions.map((rp: any) => rp.permission.name),
+      user.role.role_permissions.map((rp) => rp.permission.name),
     );
 
     return {
