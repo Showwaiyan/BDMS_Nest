@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
@@ -18,7 +18,9 @@ export class AuthService {
     // Find the default 'USER' role
     const userRole = await this.usersService.findRoleByName('USER');
     if (!userRole) {
-      throw new Error('Default USER role not found in database. Please run seed.');
+      throw new InternalServerErrorException(
+        'Default USER role not found in database. Please contact system administrator.',
+      );
     }
 
     const user = await this.usersService.create({
