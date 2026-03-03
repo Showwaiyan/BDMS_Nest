@@ -14,44 +14,24 @@ async function main() {
 
   console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating roles and permissions...');
 
-  const roles = ['ADMIN', 'STAFF', 'USER'];
+  const roles = ['ADMIN', 'STAFF', 'DONOR', 'USER'];
   const permissions = [
-    // Users & Roles
-    'user.manage',
-    'role.manage',
-    
-    // Donations
-    'donation.create',
-    'donation.approve',
-    'donation.view',
-    'donation.delete',
-    
-    // Requests
-    'request.create',
-    'request.approve',
-    'request.view',
-    'request.delete',
-    
+    // Users
+    'user.access', 'user.create', 'user.update', 'user.delete', 'user.view',
+    // Roles
+    'role.access', 'role.create', 'role.update', 'role.delete', 'role.view',
+    // Permissions
+    'permission.access', 'permission.create', 'permission.update', 'permission.delete', 'permission.view',
+    // Donors (Profiles/Applications)
+    'donor.access', 'donor.create', 'donor.update', 'donor.delete', 'donor.view',
+    // Donations (Actual blood units)
+    'donation.access', 'donation.create', 'donation.update', 'donation.delete', 'donation.view',
+    // Blood Requests
+    'request.access', 'request.create', 'request.update', 'request.view',
     // Appointments
-    'appointment.create',
-    'appointment.manage',
-    'appointment.view',
-    
+    'appointment.access', 'appointment.create', 'appointment.update', 'appointment.delete', 'appointment.view',
     // Medical Records
-    'medical.create',
-    'medical.manage',
-    'medical.view',
-    
-    // Announcements
-    'announcement.create',
-    'announcement.manage',
-    'announcement.view',
-    
-    // Inventory & Certificates
-    'inventory.view',
-    'inventory.manage',
-    'certificate.issue',
-    'certificate.view'
+    'medical.access', 'medical.create', 'medical.update'
   ];
 
   // Create Roles
@@ -74,11 +54,11 @@ async function main() {
 
   const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
   const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
+  const donorRole = await prisma.role.findUnique({ where: { name: 'DONOR' } });
   const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
-  // Link Permissions (The "Proof" of role_permission table)
+  // Link Permissions
   if (adminRole) {
-    // Admin gets everything
     for (const permName of permissions) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
       if (perm) {
@@ -92,21 +72,12 @@ async function main() {
   }
 
   if (staffRole) {
-    // Staff permissions
     const staffPerms = [
-      'donation.approve', 
-      'donation.view',
-      'request.approve', 
-      'request.view',
-      'appointment.manage',
-      'appointment.view',
-      'medical.create',
-      'medical.manage',
-      'medical.view',
-      'inventory.view',
-      'inventory.manage',
-      'certificate.issue',
-      'announcement.view'
+      'user.view', 'donor.access', 'donor.view', 'donor.update',
+      'donation.access', 'donation.view', 'donation.update',
+      'request.access', 'request.view', 'request.update',
+      'appointment.access', 'appointment.view', 'appointment.update',
+      'medical.access', 'medical.create', 'medical.update'
     ];
     for (const permName of staffPerms) {
       const perm = await prisma.permission.findUnique({ where: { name: permName } });
@@ -115,6 +86,41 @@ async function main() {
           where: { role_id_permission_id: { role_id: staffRole.id, permission_id: perm.id } },
           update: {},
           create: { role_id: staffRole.id, permission_id: perm.id },
+        });
+      }
+    }
+  }
+
+  if (donorRole) {
+    const donorPerms = [
+      'donation.create', 'donation.view',
+      'request.create', 'request.view',
+      'appointment.create', 'appointment.view',
+      'donor.view', 'donor.update'
+    ];
+    for (const permName of donorPerms) {
+      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      if (perm) {
+        await prisma.rolePermission.upsert({
+          where: { role_id_permission_id: { role_id: donorRole.id, permission_id: perm.id } },
+          update: {},
+          create: { role_id: donorRole.id, permission_id: perm.id },
+        });
+      }
+    }
+  }
+
+  if (userRole) {
+    const userPerms = [
+      'donor.create', 'donor.view', 'user.view'
+    ];
+    for (const permName of userPerms) {
+      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      if (perm) {
+        await prisma.rolePermission.upsert({
+          where: { role_id_permission_id: { role_id: userRole.id, permission_id: perm.id } },
+          update: {},
+          create: { role_id: userRole.id, permission_id: perm.id },
         });
       }
     }
@@ -140,28 +146,6 @@ async function main() {
   }
 
   if (userRole) {
-    // User permissions (Regular Donor)
-    const userPerms = [
-      'donation.create',
-      'donation.view',
-      'request.create',
-      'request.view',
-      'appointment.create',
-      'appointment.view',
-      'certificate.view',
-      'announcement.view'
-    ];
-    for (const permName of userPerms) {
-      const perm = await prisma.permission.findUnique({ where: { name: permName } });
-      if (perm) {
-        await prisma.rolePermission.upsert({
-          where: { role_id_permission_id: { role_id: userRole.id, permission_id: perm.id } },
-          update: {},
-          create: { role_id: userRole.id, permission_id: perm.id },
-        });
-      }
-    }
-    
     await prisma.user.upsert({
       where: { email: 'user@example.com' },
       update: {},
@@ -176,8 +160,6 @@ async function main() {
   }
 
   console.log('💀 Successfully seeded roles, permissions and accounts.');
-
-  // ADD MORE seeding logic here (e.g., seeding donations, requests, announcements etc.)
 
   console.log('\n🌱 Seeding completed!');
 }
