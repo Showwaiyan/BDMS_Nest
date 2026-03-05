@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
@@ -15,7 +15,18 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const user = await this.usersService.create(dto);
+    // Find the default 'USER' role
+    const userRole = await this.usersService.findRoleByName('USER');
+    if (!userRole) {
+      throw new InternalServerErrorException(
+        'Default USER role not found in database. Please contact system administrator.',
+      );
+    }
+
+    const user = await this.usersService.create({
+      ...dto,
+      role_id: userRole.id,
+    });
 
     return {
       message: 'User registered successfully',
@@ -24,7 +35,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByUsername(dto.user_name);
+    const user = (await this.usersService.findByUsername(dto.user_name)) as any;
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -43,7 +54,8 @@ export class AuthService {
     const tokens = await this.generateTokens(
       user.id,
       user.user_name,
-      user.role,
+      user.role.name,
+      user.role.role_permissions.map((rp) => rp.permission.name),
     );
 
     // TODO: May Be: set refresh token in httpOnly cookie instead of returning in response body
@@ -52,9 +64,10 @@ export class AuthService {
       data: {
         user: {
           id: user.id,
-          full_name: user.full_name,
           user_name: user.user_name,
-          role: user.role,
+          email: user.email,
+          role: user.role.name,
+          permissions: user.role.role_permissions.map((rp) => rp.permission.name),
         },
         ...tokens,
       },
@@ -67,7 +80,8 @@ export class AuthService {
     const tokens = await this.generateTokens(
       user.id,
       user.user_name,
-      user.role,
+      user.role.name,
+      user.role.role_permissions.map((rp) => rp.permission.name),
     );
 
     return {
@@ -84,8 +98,9 @@ export class AuthService {
     userId: string,
     user_name: string,
     role: string,
+    permissions: string[],
   ) {
-    const payload = { sub: userId, user_name, role };
+    const payload = { sub: userId, user_name, role, permissions };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {

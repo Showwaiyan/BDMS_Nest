@@ -2,8 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "./generated"
+  provider     = "prisma-client"
+  output       = "./generated"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -132,7 +133,7 @@ model User {
   id          String   @id @default(uuid())
   role_id     String
   hospital_id String?
-  user_name   String
+  user_name   String   @unique
   email       String   @unique
   password    String
   is_active   Boolean  @default(true)

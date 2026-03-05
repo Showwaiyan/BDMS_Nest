@@ -17,29 +17,68 @@ export class UsersService {
 
   private readonly selectUser: Prisma.UserSelect = {
     id: true,
-    full_name: true,
     user_name: true,
-    phone_number: true,
-    blood_type: true,
-    address: true,
-    role: true,
-    last_donation_date: true,
+    email: true,
+    role_id: true,
+    hospital_id: true,
     is_active: true,
     created_at: true,
     updated_at: true,
+    role: {
+      select: {
+        id: true,
+        name: true,
+        role_permissions: {
+          select: {
+            permission: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    },
     password: false,
   };
+
+  async findRoleByName(name: string) {
+    return this.prisma.role.findUnique({
+      where: { name },
+    });
+  }
 
   async findByUsername(user_name: string) {
     return this.prisma.user.findUnique({
       where: { user_name },
+      include: {
+        role: {
+          include: {
+            role_permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: this.selectUser,
+      include: {
+        role: {
+          include: {
+            role_permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -85,7 +124,7 @@ export class UsersService {
 
     if (search) {
       where.OR = [
-        { full_name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
         { user_name: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -102,7 +141,7 @@ export class UsersService {
         where: search
           ? {
               OR: [
-                { full_name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
                 { user_name: { contains: search, mode: 'insensitive' } },
               ],
             }
@@ -128,13 +167,15 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto) {
     await this.findById(id); // throws if not found
 
-    if (dto.password) {
-      dto.password = await bcrypt.hash(dto.password, 10);
+    const updateData: any = { ...dto };
+
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
     }
 
     const user = await this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: updateData,
       select: this.selectUser,
     });
 

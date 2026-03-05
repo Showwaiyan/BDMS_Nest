@@ -22,13 +22,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     sub: string;
     user_name: string;
     role: string;
+    permissions: string[];
   }): Promise<RequestedUser> {
     const user = await this.databaseService.user.findUnique({
       where: { id: payload.sub },
       select: {
-        id: true,
-        user_name: true,
-        role: true,
         is_active: true,
       },
     });
@@ -38,9 +36,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     return {
-      id: user.id,
-      user_name: user.user_name,
-      role: user.role,
+      id: payload.sub,
+      user_name: payload.user_name,
+      role: payload.role,
+      permissions: payload.permissions,
     };
   }
 }
