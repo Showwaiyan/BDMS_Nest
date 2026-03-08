@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
@@ -56,6 +60,7 @@ export class AuthService {
       user.user_name,
       user.role.name,
       user.role.role_permissions.map((rp) => rp.permission.name),
+      user.hospital_id ?? undefined,
     );
 
     // TODO: May Be: set refresh token in httpOnly cookie instead of returning in response body
@@ -67,7 +72,10 @@ export class AuthService {
           user_name: user.user_name,
           email: user.email,
           role: user.role.name,
-          permissions: user.role.role_permissions.map((rp) => rp.permission.name),
+          hospital_id: user.hospital_id ?? undefined,
+          permissions: user.role.role_permissions.map(
+            (rp) => rp.permission.name,
+          ),
         },
         ...tokens,
       },
@@ -99,8 +107,9 @@ export class AuthService {
     user_name: string,
     role: string,
     permissions: string[],
+    hospital_id?: string,
   ) {
-    const payload = { sub: userId, user_name, role, permissions };
+    const payload = { sub: userId, user_name, role, permissions, hospital_id };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {

@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,19 +25,38 @@ import * as requestedUserInterface from 'src/common/interfaces/requested-user.in
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // admin only
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  // all roles: scoped to their own hospital
   @Permissions('user.access')
   @Get()
-  findAll(@Query() dto: PaginationDto) {
-    return this.usersService.findAll(dto);
+  findAll(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Query() dto: PaginationDto,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.findAllPatients(dto, user.hospital_id);
   }
 
   // get own profile
   @Get('me')
   getMe(@CurrentUser() user: requestedUserInterface.RequestedUser) {
     return this.usersService.findOne(user.id);
+  }
+
+  // admin only: list all STAFF in their hospital
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Permissions('user.access')
+  @Get('staff')
+  findStaff(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Query() dto: PaginationDto,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.findStaffByHospital(user.hospital_id, dto);
   }
 
   // admin only
