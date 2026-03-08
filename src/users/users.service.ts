@@ -15,6 +15,8 @@ import { Prisma } from 'prisma/generated/client';
 export class UsersService {
   constructor(private prisma: DatabaseService) {}
 
+  // currently selecting for general usage
+  // can be optimized further for specific cases if needed
   private readonly selectUser: Prisma.UserSelect = {
     id: true,
     user_name: true,
@@ -115,12 +117,15 @@ export class UsersService {
     });
   }
 
-  // used by controller
-  async findAll(dto: PaginationDto) {
+  // admin: find all STAFF users in their hospital
+  async findStaffByHospital(hospitalId: string, dto: PaginationDto) {
     const { page, limit, search } = dto;
     const { skip, take } = paginate(page, limit);
 
-    const where: Prisma.UserWhereInput = {};
+    const where: Prisma.UserWhereInput = {
+      hospital_id: hospitalId,
+      role: { name: 'STAFF' },
+    };
 
     if (search) {
       where.OR = [
@@ -137,16 +142,41 @@ export class UsersService {
         take,
         orderBy: { created_at: 'desc' },
       }),
-      this.prisma.user.count({
-        where: search
-          ? {
-              OR: [
-                { email: { contains: search, mode: 'insensitive' } },
-                { user_name: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {},
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      message: 'Staff users fetched successfully',
+      data: paginatedResult(data, total, page, limit),
+    };
+  }
+
+  // used by controller — always scoped to a hospital
+  async findAllPatients(dto: PaginationDto, hospitalId: string) {
+    const { page, limit, search } = dto;
+    const { skip, take } = paginate(page, limit);
+
+    const where: Prisma.UserWhereInput = {
+      hospital_id: hospitalId,
+      role: { name: 'USER' },
+    };
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { user_name: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: this.selectUser,
+        skip,
+        take,
+        orderBy: { created_at: 'desc' },
       }),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
