@@ -1,3 +1,22 @@
+-- DropOldSchema: clean up migrations 1 & 2 before full schema overhaul
+DROP TABLE IF EXISTS "BloodInventory" CASCADE;
+DROP TABLE IF EXISTS "MedicalRecord" CASCADE;
+DROP TABLE IF EXISTS "Certificate" CASCADE;
+DROP TABLE IF EXISTS "Appointment" CASCADE;
+DROP TABLE IF EXISTS "Request" CASCADE;
+DROP TABLE IF EXISTS "Donation" CASCADE;
+DROP TABLE IF EXISTS "Announcement" CASCADE;
+DROP TABLE IF EXISTS "User" CASCADE;
+
+DROP TYPE IF EXISTS "Role";
+DROP TYPE IF EXISTS "BloodType";
+DROP TYPE IF EXISTS "DonationStatus";
+DROP TYPE IF EXISTS "RequestStatus";
+DROP TYPE IF EXISTS "AppointmentStatus";
+DROP TYPE IF EXISTS "AppointmentType";
+DROP TYPE IF EXISTS "CertificateType";
+DROP TYPE IF EXISTS "TestResult";
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
