@@ -51,7 +51,7 @@ Then open `.env` and fill in the values:
 NODE_ENV=development
 PORT=3000
 APP_NAME=BloodDonationManagmentSystem
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bdms"
+DATABASE_URL="postgresql://opom:i_got_hacked@localhost:5432/bdms"
 JWT_SECRET=your_secret_key_here
 JWT_EXPIRES_IN=7d
 JWT_REFRESH_SECRET=your_refresh_secret_here
