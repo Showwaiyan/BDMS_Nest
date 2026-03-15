@@ -36,9 +36,9 @@ export class RequestsService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, hospitalId?: string) {
     const existing = await this.requestsRepo.findByIdWithoutSelect(id);
-    if (!existing) {
+    if (!existing || (hospitalId && existing.hospital_id !== hospitalId)) {
       throw new NotFoundException('Blood request not found');
     }
 
@@ -70,10 +70,10 @@ export class RequestsService {
   }
 
 
-  async findOne(id: string) {
+  async findOne(id: string, hospitalId?: string) {
     const request = await this.requestsRepo.findById(id);
 
-    if (!request) {
+    if (!request || (hospitalId && request.hospital_id !== hospitalId)) {
       throw new NotFoundException('Blood request not found');
     }
 
@@ -83,13 +83,17 @@ export class RequestsService {
     };
   }
 
-  async findAll(query: RequestsQueryDto) {
+  async findAll(query: RequestsQueryDto, hospitalId?: string) {
     const { page, limit } = query;
     const { skip, take } = paginate(page, limit);
 
+    const where: Prisma.BloodRequestWhereInput = {
+      ...(hospitalId && { hospital_id: hospitalId }),
+    };
+
     const [data, total] = await Promise.all([
-      this.requestsRepo.findManyByCriteria({}, skip, take),
-      this.requestsRepo.count(),
+      this.requestsRepo.findManyByCriteria(where, skip, take),
+      this.requestsRepo.count(where),
     ]);
 
     return {
@@ -98,10 +102,10 @@ export class RequestsService {
     };
   }
 
-  async updateStatus(id: string, adminId: string, dto: UpdateRequestStatusDto) {
+  async updateStatus(id: string, adminId: string, dto: UpdateRequestStatusDto, hospitalId?: string) {
     const existing = await this.requestsRepo.findByIdWithoutSelect(id);
 
-    if (!existing) {
+    if (!existing || (hospitalId && existing.hospital_id !== hospitalId)) {
       throw new NotFoundException('Blood request not found');
     }
 

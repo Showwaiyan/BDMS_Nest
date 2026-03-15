@@ -3,6 +3,7 @@ import {
   IsUUID,
   IsInt,
   Min,
+  Max,
   IsEnum,
   IsDateString,
   IsNotEmpty,
@@ -10,6 +11,8 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BloodGroup, UrgencyLevel } from 'prisma/generated/client';
+
+import { IsFutureDate } from 'src/common/decorators/is-future-date.decorator';
 
 export class CreateRequestDto {
   @ApiProperty({ example: 'John Doe', description: 'Name of the patient needing blood' })
@@ -25,6 +28,7 @@ export class CreateRequestDto {
   @ApiProperty({ example: 2, description: 'Number of blood units required' })
   @IsInt()
   @Min(1)
+  @Max(50)
   @IsNotEmpty()
   units_required: number;
 
@@ -40,6 +44,7 @@ export class CreateRequestDto {
 
   @ApiProperty({ example: '2026-03-20T10:00:00Z', description: 'Date by which the blood is required' })
   @IsDateString()
+  @IsFutureDate()
   @IsNotEmpty()
   required_date: string; // or Date
 

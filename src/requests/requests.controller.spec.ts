@@ -6,6 +6,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { RequestsQueryDto } from './dto/query/requests.dto';
 import { RequestStatus, BloodGroup, UrgencyLevel } from 'prisma/generated/client';
+import { RequestedUser } from '../common/interfaces/requested-user.interface';
 
 describe('RequestsController', () => {
   let controller: RequestsController;
@@ -20,7 +21,13 @@ describe('RequestsController', () => {
     remove: jest.fn(),
   };
 
-  const mockUser = { id: 'user-1', email: 'test@test.com', user_name: 'test' };
+  const mockUser: RequestedUser = {
+    id: 'user-1',
+    user_name: 'test',
+    role: 'HOSPITAL',
+    permissions: [],
+    hospital_id: 'hosp-1',
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,7 +51,8 @@ describe('RequestsController', () => {
   describe('requestBlood', () => {
     it('should throw ForbiddenException if user has no hospital_id', () => {
       const dto = {} as CreateRequestDto;
-      expect(() => controller.requestBlood(mockUser as any, dto)).toThrow(ForbiddenException);
+      const userWithoutHospital = { ...mockUser, hospital_id: undefined };
+      expect(() => controller.requestBlood(userWithoutHospital, dto)).toThrow(ForbiddenException);
     });
 
     it('should create a request if user has hospital_id', async () => {
@@ -57,10 +65,9 @@ describe('RequestsController', () => {
         required_date: new Date().toISOString(),
         reason: 'Surgery',
       };
-      const hospitalUser = { ...mockUser, hospital_id: 'hosp-1' };
       mockRequestsService.requestBlood.mockResolvedValue({ message: 'Success', data: { id: 'req-1' } });
-      expect(await controller.requestBlood(hospitalUser as any, dto)).toEqual({ message: 'Success', data: { id: 'req-1' } });
-      expect(service.requestBlood).toHaveBeenCalledWith(hospitalUser, dto);
+      expect(await controller.requestBlood(mockUser, dto)).toEqual({ message: 'Success', data: { id: 'req-1' } });
+      expect(service.requestBlood).toHaveBeenCalledWith(mockUser, dto);
     });
   });
 
@@ -87,25 +94,26 @@ describe('RequestsController', () => {
   });
 
   describe('findAll and findMyRequests', () => {
-    it('should return all requests', async () => {
+    it('should return all requests filtered by hospital', async () => {
       const query = new RequestsQueryDto();
       mockRequestsService.findAll.mockResolvedValue({ message: 'Success', data: [] });
-      expect(await controller.findAll(query)).toEqual({ message: 'Success', data: [] });
+      expect(await controller.findAll(query, mockUser)).toEqual({ message: 'Success', data: [] });
+      expect(service.findAll).toHaveBeenCalledWith(query, 'hosp-1');
     });
 
     it('should return user requests', async () => {
       const query = new RequestsQueryDto();
       mockRequestsService.findMyRequests.mockResolvedValue({ message: 'Success', data: [] });
-      expect(await controller.findMyRequests(mockUser as any, query)).toEqual({ message: 'Success', data: [] });
+      expect(await controller.findMyRequests(mockUser, query)).toEqual({ message: 'Success', data: [] });
     });
   });
 
   describe('updateStatus', () => {
-    it('should update request status', async () => {
+    it('should update request status with hospital scope', async () => {
       const dto: UpdateRequestStatusDto = { status: RequestStatus.approved };
       mockRequestsService.updateStatus.mockResolvedValue({ message: 'Updated', data: { id: 'req-1' } });
-      expect(await controller.updateStatus(mockUser as any, 'req-1', dto)).toEqual({ message: 'Updated', data: { id: 'req-1' } });
-      expect(service.updateStatus).toHaveBeenCalledWith('req-1', 'user-1', dto);
+      expect(await controller.updateStatus(mockUser, 'req-1', dto)).toEqual({ message: 'Updated', data: { id: 'req-1' } });
+      expect(service.updateStatus).toHaveBeenCalledWith('req-1', 'user-1', dto, 'hosp-1');
     });
   });
 });

@@ -45,6 +45,7 @@ describe('RequestsRepository', () => {
           user_id: 'user-1',
           status: RequestStatus.pending,
           hospital_id: 'hosp-1',
+          deleted_at: null,
         },
       };
       mockDbService.bloodRequest.findFirst.mockResolvedValue({ id: 'req-1' });
@@ -72,12 +73,12 @@ describe('RequestsRepository', () => {
 
   describe('findById', () => {
     it('should find a specific request with strict selects', async () => {
-      mockDbService.bloodRequest.findUnique.mockResolvedValue({ id: 'req-1' });
+      mockDbService.bloodRequest.findFirst.mockResolvedValue({ id: 'req-1' });
 
       await repository.findById('req-1');
 
-      expect(dbService.bloodRequest.findUnique).toHaveBeenCalledWith({
-        where: { id: 'req-1' },
+      expect(dbService.bloodRequest.findFirst).toHaveBeenCalledWith({
+        where: { id: 'req-1', deleted_at: null },
         select: repository.selectRequest,
       });
     });
@@ -85,24 +86,25 @@ describe('RequestsRepository', () => {
 
   describe('findByIdWithoutSelect', () => {
     it('should find a request without select masking', async () => {
-      mockDbService.bloodRequest.findUnique.mockResolvedValue({ id: 'req-1' });
+      mockDbService.bloodRequest.findFirst.mockResolvedValue({ id: 'req-1' });
 
       await repository.findByIdWithoutSelect('req-1');
 
-      expect(dbService.bloodRequest.findUnique).toHaveBeenCalledWith({
-        where: { id: 'req-1' },
+      expect(dbService.bloodRequest.findFirst).toHaveBeenCalledWith({
+        where: { id: 'req-1', deleted_at: null },
       });
     });
   });
 
   describe('delete', () => {
-    it('should issue a delete command to Prisma', async () => {
-      mockDbService.bloodRequest.delete.mockResolvedValue({ id: 'req-1' });
+    it('should issue a soft-delete (update) command to Prisma', async () => {
+      mockDbService.bloodRequest.update.mockResolvedValue({ id: 'req-1' });
 
       await repository.delete('req-1');
 
-      expect(dbService.bloodRequest.delete).toHaveBeenCalledWith({
+      expect(dbService.bloodRequest.update).toHaveBeenCalledWith({
         where: { id: 'req-1' },
+        data: { deleted_at: expect.any(Date) },
       });
     });
   });
@@ -114,7 +116,7 @@ describe('RequestsRepository', () => {
       await repository.findManyByCriteria({ user_id: 'user-1' }, 10, 5);
 
       expect(dbService.bloodRequest.findMany).toHaveBeenCalledWith({
-        where: { user_id: 'user-1' },
+        where: { user_id: 'user-1', deleted_at: null },
         select: repository.selectRequest,
         skip: 10,
         take: 5,
@@ -130,7 +132,7 @@ describe('RequestsRepository', () => {
       const count = await repository.count({ user_id: 'user-1' });
 
       expect(dbService.bloodRequest.count).toHaveBeenCalledWith({
-        where: { user_id: 'user-1' },
+        where: { user_id: 'user-1', deleted_at: null },
       });
       expect(count).toBe(100);
     });

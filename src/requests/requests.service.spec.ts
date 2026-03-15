@@ -106,10 +106,10 @@ describe('RequestsService', () => {
 
   describe('remove request', () => {
     it('should delete a request successfully', async () => {
-      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({ id: 'request-123' });
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({ id: 'request-123', hospital_id: 'hosp-1' });
       mockRequestsRepo.delete.mockResolvedValue({ id: 'request-123' });
 
-      const result = await service.remove('request-123');
+      const result = await service.remove('request-123', 'hosp-1');
 
       expect(repo.findByIdWithoutSelect).toHaveBeenCalledWith('request-123');
       expect(repo.delete).toHaveBeenCalledWith('request-123');
@@ -119,7 +119,14 @@ describe('RequestsService', () => {
     it('should throw NotFoundException if request does not exist', async () => {
       mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue(null);
 
-      await expect(service.remove('request-123')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('request-123', 'hosp-1')).rejects.toThrow(NotFoundException);
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if request belongs to another hospital', async () => {
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({ id: 'request-123', hospital_id: 'hosp-2' });
+
+      await expect(service.remove('request-123', 'hosp-1')).rejects.toThrow(NotFoundException);
       expect(repo.delete).not.toHaveBeenCalled();
     });
   });
@@ -145,10 +152,10 @@ describe('RequestsService', () => {
 
   describe('find one', () => {
     it('should return a specific request by id', async () => {
-      const mockRequest = { id: 'request-123', status: RequestStatus.pending };
+      const mockRequest = { id: 'request-123', status: RequestStatus.pending, hospital_id: 'hosp-1' };
       mockRequestsRepo.findById.mockResolvedValue(mockRequest);
 
-      const result = await service.findOne('request-123');
+      const result = await service.findOne('request-123', 'hosp-1');
 
       expect(repo.findById).toHaveBeenCalledWith('request-123');
       expect(result.message).toBe('Request fetched successfully');
@@ -158,25 +165,34 @@ describe('RequestsService', () => {
     it('should throw NotFoundException if request is not found', async () => {
       mockRequestsRepo.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('request-123')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('request-123', 'hosp-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if request belongs to another hospital', async () => {
+      const mockRequest = { id: 'request-123', status: RequestStatus.pending, hospital_id: 'hosp-2' };
+      mockRequestsRepo.findById.mockResolvedValue(mockRequest);
+
+      await expect(service.findOne('request-123', 'hosp-1')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('find all', () => {
-    it('should return all paginated requests', async () => {
+    it('should return all paginated requests scoped to hospital', async () => {
       const mockQuery = { page: 1, limit: 10 };
-      const mockData = [{ id: 'request-1' }, { id: 'request-2' }, { id: 'request-3' }];
+      const mockData = [{ id: 'request-1' }, { id: 'request-2' }];
 
       mockRequestsRepo.findManyByCriteria.mockResolvedValue(mockData);
-      mockRequestsRepo.count.mockResolvedValue(3);
+      mockRequestsRepo.count.mockResolvedValue(2);
 
-      const result = await service.findAll(mockQuery);
+      const result = await service.findAll(mockQuery, 'hosp-1');
 
-      expect(repo.findManyByCriteria).toHaveBeenCalled();
-      expect(repo.count).toHaveBeenCalled();
+      const expectedWhere = { hospital_id: 'hosp-1' };
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(expectedWhere, 0, 10);
+      expect(repo.count).toHaveBeenCalledWith(expectedWhere);
       expect(result.message).toBe('All requests fetched successfully');
       expect(result.data.data).toEqual(mockData);
-      expect(result.data.meta.total).toBe(3);
+      expect(result.data.meta.total).toBe(2);
     });
   });
 
@@ -200,7 +216,14 @@ describe('RequestsService', () => {
     it('should throw NotFoundException if request does not exist', async () => {
       mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue(null);
 
-      await expect(service.updateStatus('request-123', adminId, { status: RequestStatus.approved }))
+      await expect(service.updateStatus('request-123', adminId, { status: RequestStatus.approved }, 'hosp-1'))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if request belongs to another hospital', async () => {
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({ id: 'request-123', hospital_id: 'hosp-2' });
+
+      await expect(service.updateStatus('request-123', adminId, { status: RequestStatus.approved }, 'hosp-1'))
         .rejects.toThrow(NotFoundException);
     });
 

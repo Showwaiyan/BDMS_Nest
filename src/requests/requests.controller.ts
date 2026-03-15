@@ -58,8 +58,8 @@ export class RequestsController {
   @Roles('ADMIN', 'STAFF')
   @ApiOperation({ summary: 'Get a blood request by ID (Admin & Staff only)', description: 'Admin or Staff can get a blood request by ID using this endpoint.' })
   @Permissions('request.access')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.requestsService.findOne(id);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestedUser) {
+    return this.requestsService.findOne(id, user.hospital_id);
   }
 
   // Accept or Reject blood request
@@ -73,7 +73,7 @@ export class RequestsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateRequestStatusDto: UpdateRequestStatusDto,
   ) {
-    return this.requestsService.updateStatus(id, user.id, updateRequestStatusDto);
+    return this.requestsService.updateStatus(id, user.id, updateRequestStatusDto, user.hospital_id);
   }
 
   @UseGuards(RolesGuard)
@@ -81,8 +81,8 @@ export class RequestsController {
   @Roles('ADMIN', 'STAFF')
   @Get()
   @ApiOperation({ summary: 'Get all blood requests (Admin & Staff only)', description: 'Admin or Staff can get all blood requests using this endpoint.' })
-  findAll(@Query() query: RequestsQueryDto) {
-    return this.requestsService.findAll(query);
+  findAll(@Query() query: RequestsQueryDto, @CurrentUser() user: RequestedUser) {
+    return this.requestsService.findAll(query, user.hospital_id);
   }
 
   @UseGuards(RolesGuard)
@@ -90,7 +90,7 @@ export class RequestsController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a blood request (Admin only)', description: 'Admin can delete a blood request using this endpoint.' })
   @Permissions('request.delete')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.requestsService.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestedUser) {
+    return this.requestsService.remove(id, user.hospital_id);
   }
 }

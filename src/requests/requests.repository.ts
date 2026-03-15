@@ -35,6 +35,7 @@ export class RequestsRepository {
         user_id: userId,
         status: RequestStatus.pending,
         hospital_id: hospitalId,
+        deleted_at: null,
       },
     });
   }
@@ -47,21 +48,22 @@ export class RequestsRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.bloodRequest.findUnique({
-      where: { id },
+    return this.prisma.bloodRequest.findFirst({
+      where: { id, deleted_at: null },
       select: this.selectRequest,
     });
   }
 
   async findByIdWithoutSelect(id: string) {
-    return this.prisma.bloodRequest.findUnique({
-      where: { id },
+    return this.prisma.bloodRequest.findFirst({
+      where: { id, deleted_at: null },
     });
   }
 
   async delete(id: string) {
-    return this.prisma.bloodRequest.delete({
+    return this.prisma.bloodRequest.update({
       where: { id },
+      data: { deleted_at: new Date() },
     });
   }
 
@@ -71,7 +73,7 @@ export class RequestsRepository {
     take?: number,
   ) {
     return this.prisma.bloodRequest.findMany({
-      where,
+      where: { ...where, deleted_at: null },
       select: this.selectRequest,
       skip,
       take,
@@ -80,7 +82,7 @@ export class RequestsRepository {
   }
 
   async count(where?: Prisma.BloodRequestWhereInput) {
-    return this.prisma.bloodRequest.count({ where });
+    return this.prisma.bloodRequest.count({ where: { ...where, deleted_at: null } });
   }
 
   async updateStatus(
