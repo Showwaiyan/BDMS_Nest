@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequestsService } from './requests.service';
@@ -53,10 +54,11 @@ export class RequestsController {
   }
 
   @Get(':id')
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'STAFF')
   @ApiOperation({ summary: 'Get a blood request by ID (Admin & Staff only)', description: 'Admin or Staff can get a blood request by ID using this endpoint.' })
   @Permissions('request.access')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.requestsService.findOne(id);
   }
 
@@ -68,7 +70,7 @@ export class RequestsController {
   @Permissions('request.update')
   updateStatus(
     @CurrentUser() user: RequestedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateRequestStatusDto: UpdateRequestStatusDto,
   ) {
     return this.requestsService.updateStatus(id, user.id, updateRequestStatusDto);
@@ -83,11 +85,12 @@ export class RequestsController {
     return this.requestsService.findAll(query);
   }
 
+  @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a blood request (Admin only)', description: 'Admin can delete a blood request using this endpoint.' })
   @Permissions('request.delete')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.requestsService.remove(id);
   }
 }

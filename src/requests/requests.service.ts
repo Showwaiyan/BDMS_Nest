@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { RequestsRepository } from './requests.repository';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { RequestsQueryDto } from './dto/query/requests.dto';
@@ -10,39 +10,11 @@ import { generateRequestCode } from 'src/common/helpers/request-code.helper';
 
 @Injectable()
 export class RequestsService {
-  constructor(private prisma: DatabaseService) { }
+  constructor(private readonly requestsRepo: RequestsRepository) { }
 
-  // Select fields for blood request (For Response)
-  private readonly selectRequest: Prisma.BloodRequestSelect = {
-    id: true,
-    user_id: true,
-    hospital_id: true,
-    blood_request_code: true,
-    patient_name: true,
-    blood_group: true,
-    units_required: true,
-    contact_phone: true,
-    urgency: true,
-    required_date: true,
-    status: true,
-    reason: true,
-    created_at: true,
-    hospital: {
-      select: { name: true, phone: true }
-    },
-    user: {
-      select: { user_name: true, email: true }
-    }
-  };
 
   async requestBlood(user: RequestedUser, createRequestDto: CreateRequestDto) {
-    const existingRequest = await this.prisma.bloodRequest.findFirst({
-      where: {
-        user_id: user.id,
-        status: RequestStatus.pending,
-        hospital_id: user.hospital_id,
-      },
-    });
+    const existingRequest = await this.requestsRepo.findPendingRequestByUserAndHospital(user.id, user.hospital_id!);
 
     if (existingRequest) {
       throw new BadRequestException('You already have a pending request! Wait for approval');
@@ -51,14 +23,11 @@ export class RequestsService {
     // Generate a random 6-digit code for the request (e.g., REQ-123456 -- Now For Example)
     const blood_request_code = generateRequestCode();
 
-    const request = await this.prisma.bloodRequest.create({
-      data: {
-        ...createRequestDto,
-        user_id: user.id,
-        hospital_id: user.hospital_id!,
-        blood_request_code,
-      },
-      select: this.selectRequest,
+    const request = await this.requestsRepo.create({
+      ...createRequestDto,
+      user_id: user.id,
+      hospital_id: user.hospital_id!,
+      blood_request_code,
     });
 
     return {
@@ -68,12 +37,12 @@ export class RequestsService {
   }
 
   async remove(id: string) {
-    const existing = await this.prisma.bloodRequest.findUnique({ where: { id } });
+    const existing = await this.requestsRepo.findByIdWithoutSelect(id);
     if (!existing) {
       throw new NotFoundException('Blood request not found');
     }
 
-    await this.prisma.bloodRequest.delete({ where: { id } });
+    await this.requestsRepo.delete(id);
 
     return {
       message: 'Request deleted successfully',
@@ -82,8 +51,6 @@ export class RequestsService {
   }
 
   async findMyRequests(userId: string, query: RequestsQueryDto) {
-    console.log(userId, query)
-
     const { page, limit } = query;
     const { skip, take } = paginate(page, limit);
 
@@ -92,14 +59,8 @@ export class RequestsService {
     };
 
     const [data, total] = await Promise.all([
-      this.prisma.bloodRequest.findMany({
-        where,
-        select: this.selectRequest,
-        skip,
-        take,
-        orderBy: { created_at: 'desc' },
-      }),
-      this.prisma.bloodRequest.count({ where }),
+      this.requestsRepo.findManyByCriteria(where, skip, take),
+      this.requestsRepo.count(where),
     ]);
 
     return {
@@ -110,10 +71,7 @@ export class RequestsService {
 
 
   async findOne(id: string) {
-    const request = await this.prisma.bloodRequest.findUnique({
-      where: { id },
-      select: this.selectRequest,
-    });
+    const request = await this.requestsRepo.findById(id);
 
     if (!request) {
       throw new NotFoundException('Blood request not found');
@@ -130,13 +88,8 @@ export class RequestsService {
     const { skip, take } = paginate(page, limit);
 
     const [data, total] = await Promise.all([
-      this.prisma.bloodRequest.findMany({
-        select: this.selectRequest,
-        skip,
-        take,
-        orderBy: { created_at: 'desc' },
-      }),
-      this.prisma.bloodRequest.count(),
+      this.requestsRepo.findManyByCriteria({}, skip, take),
+      this.requestsRepo.count(),
     ]);
 
     return {
@@ -146,9 +99,7 @@ export class RequestsService {
   }
 
   async updateStatus(id: string, adminId: string, dto: UpdateRequestStatusDto) {
-    const existing = await this.prisma.bloodRequest.findUnique({
-      where: { id },
-    });
+    const existing = await this.requestsRepo.findByIdWithoutSelect(id);
 
     if (!existing) {
       throw new NotFoundException('Blood request not found');
@@ -158,14 +109,11 @@ export class RequestsService {
       throw new BadRequestException('Request is already approved or rejected');
     }
 
-    const request = await this.prisma.bloodRequest.update({
-      where: { id },
-      data: {
-        status: dto.status,
-        approved_by: adminId,
-        approved_at: new Date(),
-      },
-      select: this.selectRequest,
+    const isApproved = dto.status === RequestStatus.approved;
+
+    const request = await this.requestsRepo.updateStatus(id, {
+      status: dto.status,
+      ...(isApproved ? { approved_by: adminId, approved_at: new Date() } : {}),
     });
 
     return {
