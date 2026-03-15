@@ -44,7 +44,7 @@ export class RequestsController {
 
   @Get('my-requests')
   @ApiOperation({ summary: 'Get user specific blood requests', description: 'A registered hospital user can get user specific blood requests using this endpoint.' })
-  @Permissions('request.view')
+  @Permissions('request.access')
   findMyRequests(
     @CurrentUser() user: RequestedUser,
     @Query() query: RequestsQueryDto,
@@ -55,7 +55,7 @@ export class RequestsController {
   @Get(':id')
   @Roles('ADMIN', 'STAFF')
   @ApiOperation({ summary: 'Get a blood request by ID (Admin & Staff only)', description: 'Admin or Staff can get a blood request by ID using this endpoint.' })
-  @Permissions('request.view')
+  @Permissions('request.access')
   findOne(@Param('id') id: string) {
     return this.requestsService.findOne(id);
   }
@@ -63,7 +63,7 @@ export class RequestsController {
   // Accept or Reject blood request
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'STAFF')
-  @Patch(':id/status')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update blood request status (Admin & Staff only)', description: 'Admin or Staff can accept or reject a blood request using this endpoint.' })
   @Permissions('request.update')
   updateStatus(
@@ -75,7 +75,7 @@ export class RequestsController {
   }
 
   @UseGuards(RolesGuard)
-  @Permissions('request.view')
+  @Permissions('request.access')
   @Roles('ADMIN', 'STAFF')
   @Get()
   @ApiOperation({ summary: 'Get all blood requests (Admin & Staff only)', description: 'Admin or Staff can get all blood requests using this endpoint.' })
