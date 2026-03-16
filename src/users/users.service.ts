@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 import * as bcrypt from 'bcryptjs';

@@ -6,12 +6,14 @@ import { paginate, paginatedResult } from 'src/common/helpers/paginate.helper';
 
 @Injectable()
 export class DonationsService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createDonationDto: CreateDonationDto) {
     return 'This action adds a new donation';
   }
 
   findAll(query: DonationsQueryDto) {
     const { page, limit } = query;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { skip, take } = paginate(page, limit);
 
     const total = 0; // Replace with actual total count from database
@@ -25,6 +27,7 @@ export class DonationsService {
     return `This action returns a #${id} donation`;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(id: number, updateDonationDto: UpdateDonationDto) {
     return `This action updates a #${id} donation`;
   }
