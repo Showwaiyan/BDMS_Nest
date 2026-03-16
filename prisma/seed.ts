@@ -83,7 +83,6 @@ async function main() {
     'certificate.update',
     'certificate.delete',
     'certificate.view',
-    'certificate.issue',
   ];
 
   // Create Roles
@@ -134,12 +133,15 @@ async function main() {
       'user.access',
       'user.view',
       'donor.access',
+      'donor.create',
       'donor.view',
       'donor.update',
       'donation.access',
+      'donation.create',
       'donation.view',
       'donation.update',
       'request.access',
+      'request.create',
       'request.view',
       'request.update',
       'appointment.access',
@@ -156,8 +158,10 @@ async function main() {
       'inventory.view',
       'inventory.manage',
       'certificate.access',
+      'certificate.create',
       'certificate.view',
-      'certificate.issue',
+      'certificate.update',
+      'certificate.delete',
     ];
     for (const permName of staffPerms) {
       const perm = await prisma.permission.findUnique({
