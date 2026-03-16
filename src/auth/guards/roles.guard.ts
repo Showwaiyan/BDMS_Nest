@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decortor';
+import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -19,7 +20,9 @@ export class RolesGuard implements CanActivate {
 
     if (!requiredRoles) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<{
+      user: requestedUserInterface.RequestedUser;
+    }>();
 
     if (!user || !requiredRoles.includes(user.role)) {
       throw new ForbiddenException('You do not have permission');
