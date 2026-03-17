@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -9,6 +10,7 @@ import { UsersService } from '../users/users.service';
 import { AppConfigService } from '../config/config.helper';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/logint.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +41,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = (await this.usersService.findByUsername(dto.user_name)) as any;
+    const user = await this.usersService.findByUsername(dto.user_name);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -100,6 +102,37 @@ export class AuthService {
 
   async getProfile(userId: string) {
     return this.usersService.findOne(userId);
+  }
+
+  async updatePassword(userId: string, dto: UpdatePasswordDto) {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      dto.currentPassword,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.usersService.updatePassword(userId, hashedPassword);
+
+    return {
+      message: 'Password updated successfully',
+    };
   }
 
   private async generateTokens(

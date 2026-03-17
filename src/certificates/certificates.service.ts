@@ -4,6 +4,7 @@ import { UpdateCertificateDto } from './dto/update-certificate.dto';
 
 @Injectable()
 export class CertificatesService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createCertificateDto: CreateCertificateDto) {
     return 'This action adds a new certificate';
   }
@@ -16,6 +17,7 @@ export class CertificatesService {
     return `This action returns a #${id} certificate`;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(id: number, updateCertificateDto: UpdateCertificateDto) {
     return `This action updates a #${id} certificate`;
   }

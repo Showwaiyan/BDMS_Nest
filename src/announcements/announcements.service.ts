@@ -17,6 +17,7 @@ export class AnnouncementsService {
     created_at: true,
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createAnnouncementDto: CreateAnnouncementDto) {
     return { data: 'This action adds a new announcement' };
   }
@@ -43,6 +44,7 @@ export class AnnouncementsService {
     return `This action returns a #${id} announcement`;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(id: number, updateAnnouncementDto: UpdateAnnouncementDto) {
     return `This action updates a #${id} announcement`;
   }

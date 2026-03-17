@@ -10,7 +10,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,6 +18,7 @@ import { Roles } from 'src/auth/decorators/roles.decortor';
 import { Permissions } from 'src/auth/decorators/permissions.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('users')
@@ -69,33 +69,22 @@ export class UsersController {
   }
 
   // update own profile
-  @Patch('me')
-  updateMe(
-    @CurrentUser() user: requestedUserInterface.RequestedUser,
-    @Body() dto: UpdateUserDto,
-  ) {
-    return this.usersService.update(user.id, dto);
-  }
+  // @Patch('me')
+  // updateMe(
+  //   @CurrentUser() user: requestedUserInterface.RequestedUser,
+  //   @Body() dto: UpdateUserDto,
+  // ) {
+  //   return this.usersService.update(user.id, dto);
+  // }
 
-  // admin only - general update (excludes role)
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @Permissions('user.update')
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
-  }
-
-  // admin only - dedicated role update
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Permissions('role.update')
   @Patch(':id/role')
-  updateRole(@Param('id') id: string, @Body('role_id') role_id: string) {
-    return this.usersService.update(id, { role_id } as any);
+  updateRole(@Param('id') id: string, @Body('role') dto: UpdateUserRoleDto) {
+    return this.usersService.updateUserRole(id, dto.role);
   }
 
-  // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Permissions('user.update')
@@ -104,7 +93,6 @@ export class UsersController {
     return this.usersService.toggleActive(id);
   }
 
-  // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Permissions('user.delete')

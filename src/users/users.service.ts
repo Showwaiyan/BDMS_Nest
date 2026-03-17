@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 import * as bcrypt from 'bcryptjs';
@@ -194,25 +193,54 @@ export class UsersService {
     };
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  // async update(id: string, dto: UpdateUserDto) {
+  //   await this.findById(id); // throws if not found
+
+  //   const updateData: any = { ...dto };
+
+  //   if (updateData.password) {
+  //     updateData.password = await bcrypt.hash(updateData.password, 10);
+  //   }
+
+  //   const user = await this.prisma.user.update({
+  //     where: { id },
+  //     data: updateData,
+  //     select: this.selectUser,
+  //   });
+
+  //   return {
+  //     message: 'User updated successfully',
+  //     data: user,
+  //   };
+  // }
+
+  async updateUserRole(id: string, role: 'USER' | 'STAFF' | 'ADMIN') {
     await this.findById(id); // throws if not found
+    const roleRecord = await this.prisma.role.findUnique({
+      where: { name: role },
+    });
 
-    const updateData: any = { ...dto };
-
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
+    if (!roleRecord) {
+      throw new NotFoundException('Role not found');
     }
 
     const user = await this.prisma.user.update({
       where: { id },
-      data: updateData,
+      data: { role_id: roleRecord.id },
       select: this.selectUser,
     });
 
     return {
-      message: 'User updated successfully',
+      message: 'User role updated successfully',
       data: user,
     };
+  }
+
+  async updatePassword(id: string, hashedPassword: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+    });
   }
 
   async toggleActive(id: string) {
