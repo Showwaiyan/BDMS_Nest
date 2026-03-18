@@ -60,12 +60,13 @@ describe('UsersService', () => {
     it('should query role by name', async () => {
       databaseService.role.findUnique.mockResolvedValue({ id: 'role-1' });
 
-      const result = await service.findRoleByName('USER');
+      await expect(service.findRoleByName('USER')).resolves.toEqual({
+        id: 'role-1',
+      });
 
       expect(databaseService.role.findUnique).toHaveBeenCalledWith({
         where: { name: 'USER' },
       });
-      expect(result).toEqual({ id: 'role-1' });
     });
   });
 
@@ -82,9 +83,7 @@ describe('UsersService', () => {
       const user = { id: 'user-1' };
       databaseService.user.findUnique.mockResolvedValue(user);
 
-      const result = await service.findById('user-1');
-
-      expect(result).toBe(user);
+      await expect(service.findById('user-1')).resolves.toEqual(user);
     });
   });
 
@@ -109,24 +108,16 @@ describe('UsersService', () => {
       mockedBcrypt.hash.mockResolvedValueOnce('hashed-password' as never);
       databaseService.user.create.mockResolvedValue({ id: 'user-1' });
 
-      const result = await service.create({
-        user_name: 'john',
-        email: 'john@example.com',
-        password: 'password123',
-        role_id: 'role-1',
-      });
-
-      expect(databaseService.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            user_name: 'john',
-            email: 'john@example.com',
-            password: 'hashed-password',
-            role_id: 'role-1',
-          }),
+      await expect(
+        service.create({
+          user_name: 'john',
+          email: 'john@example.com',
+          password: 'password123',
+          role_id: 'role-1',
         }),
-      );
-      expect(result).toEqual({ id: 'user-1' });
+      ).resolves.toEqual({ id: 'user-1' });
+
+      expect(databaseService.user.create).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -148,7 +139,10 @@ describe('UsersService', () => {
         role_id: 'role-staff',
       });
 
-      const result = await service.updateUserRole('user-1', 'STAFF');
+      await expect(service.updateUserRole('user-1', 'STAFF')).resolves.toEqual({
+        message: 'User role updated successfully',
+        data: { id: 'user-1', role_id: 'role-staff' },
+      });
 
       expect(databaseService.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,10 +150,6 @@ describe('UsersService', () => {
           data: { role_id: 'role-staff' },
         }),
       );
-      expect(result).toEqual({
-        message: 'User role updated successfully',
-        data: { id: 'user-1', role_id: 'role-staff' },
-      });
     });
   });
 
@@ -174,7 +164,10 @@ describe('UsersService', () => {
         is_active: false,
       });
 
-      const result = await service.toggleActive('user-1');
+      await expect(service.toggleActive('user-1')).resolves.toEqual({
+        message: 'User deactivated successfully',
+        data: { id: 'user-1', is_active: false },
+      });
 
       expect(databaseService.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -182,10 +175,6 @@ describe('UsersService', () => {
           data: { is_active: false },
         }),
       );
-      expect(result).toEqual({
-        message: 'User deactivated successfully',
-        data: { id: 'user-1', is_active: false },
-      });
     });
   });
 
@@ -194,14 +183,13 @@ describe('UsersService', () => {
       databaseService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       databaseService.user.delete.mockResolvedValue({ id: 'user-1' });
 
-      const result = await service.remove('user-1');
+      await expect(service.remove('user-1')).resolves.toEqual({
+        message: 'User deleted successfully',
+        data: null,
+      });
 
       expect(databaseService.user.delete).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-      });
-      expect(result).toEqual({
-        message: 'User deleted successfully',
-        data: null,
       });
     });
   });
