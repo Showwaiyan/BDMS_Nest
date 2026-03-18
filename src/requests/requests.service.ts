@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { RequestsQueryDto } from './dto/query/requests.dto';
-import { paginate, paginatedResult } from 'src/common/helpers/paginate.helper';
+import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 
 @Injectable()
 export class RequestsService {
