@@ -4,6 +4,7 @@ import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
 
 @Injectable()
 export class BloodInventoryService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createBloodInventoryDto: CreateBloodInventoryDto) {
     return 'This action adds a new bloodInventory';
   }
@@ -16,6 +17,7 @@ export class BloodInventoryService {
     return `This action returns a #${id} bloodInventory`;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(id: number, updateBloodInventoryDto: UpdateBloodInventoryDto) {
     return `This action updates a #${id} bloodInventory`;
   }

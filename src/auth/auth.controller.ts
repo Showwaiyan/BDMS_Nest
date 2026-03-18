@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/logint.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
 
 @Controller('auth')
@@ -27,8 +28,17 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('profile')
+  @Get('me')
   getProfile(@CurrentUser() user: requestedUserInterface.RequestedUser) {
     return this.authService.getProfile(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('update-password')
+  updatePassword(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Body() dto: UpdatePasswordDto,
+  ) {
+    return this.authService.updatePassword(user.id, dto);
   }
 }

@@ -23,7 +23,9 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('BDMS Nestjs API')
-    .setDescription('API documentation for the Blood Donation Management System built with NestJS')
+    .setDescription(
+      'API documentation for the Blood Donation Management System built with NestJS',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -31,7 +33,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(appConfig.port);
+  app.enableCors();
+  await app.listen(appConfig.port, '0.0.0.0');
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Failed to start application:', error);
+  process.exit(1);
+});
