@@ -30,6 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         is_active: true,
         role: {
           select: {
+            name: true,
             role_permissions: {
               select: {
                 permission: {
@@ -55,7 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: payload.sub,
       user_name: payload.user_name,
-      role: payload.role,
+      role: user.role.name,
       permissions: effectivePermissions,
       hospital_id: payload.hospital_id,
     };
