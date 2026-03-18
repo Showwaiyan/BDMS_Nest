@@ -68,6 +68,7 @@
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-jest": "^29.15.0",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
@@ -100,6 +101,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1",
+      "^prisma/generated/(.*)\\.js$": "<rootDir>/../prisma/generated/$1",
+      "^prisma/generated/client$": "<rootDir>/../prisma/generated/client",
+      "^(\\.\\.?/.*)\\.js$": "$1"
+    },
     "testEnvironment": "node"
   },
   "packageManager": "pnpm@10.29.2+sha512.bef43fa759d91fd2da4b319a5a0d13ef7a45bb985a3d7342058470f9d2051a3ba8674e629672654686ef9443ad13a82da2beb9eeb3e0221c87b8154fff9d74b8",

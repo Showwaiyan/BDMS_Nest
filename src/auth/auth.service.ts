@@ -18,7 +18,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private appConfig: AppConfigService,
-  ) { }
+  ) {}
 
   async register(dto: RegisterDto) {
     // Find the default 'USER' role
