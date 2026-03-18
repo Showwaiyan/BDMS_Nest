@@ -29,7 +29,10 @@ export class RequestsRepository {
     },
   };
 
-  async findPendingRequestByUserAndHospital(userId: string, hospitalId: string) {
+  async findPendingRequestByUserAndHospital(
+    userId: string,
+    hospitalId: string,
+  ) {
     return this.prisma.bloodRequest.findFirst({
       where: {
         user_id: userId,
@@ -40,7 +43,7 @@ export class RequestsRepository {
     });
   }
 
-  async create(data: Prisma.BloodRequestUncheckedCreateInput) {
+  async create(data: Prisma.BloodRequestCreateInput) {
     return this.prisma.bloodRequest.create({
       data,
       select: this.selectRequest,
@@ -82,17 +85,33 @@ export class RequestsRepository {
   }
 
   async count(where?: Prisma.BloodRequestWhereInput) {
-    return this.prisma.bloodRequest.count({ where: { ...where, deleted_at: null } });
+    return this.prisma.bloodRequest.count({
+      where: { ...where, deleted_at: null },
+    });
   }
 
-  async updateStatus(
-    id: string,
-    data: Prisma.BloodRequestUncheckedUpdateInput,
-  ) {
+  async updateStatus(id: string, data: Prisma.BloodRequestUpdateInput) {
     return this.prisma.bloodRequest.update({
       where: { id },
       data,
       select: this.selectRequest,
     });
+  }
+
+  async updateStatusIfPending(
+    id: string,
+    data: Prisma.BloodRequestUpdateInput,
+    hospitalId?: string,
+  ) {
+    const updated = await this.prisma.bloodRequest.updateMany({
+      where: {
+        id,
+        status: 'pending',
+        hospital_id: hospitalId,
+      },
+      data,
+    });
+    // number of rows updated
+    return updated.count;
   }
 }

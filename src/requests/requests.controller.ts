@@ -22,16 +22,20 @@ import { Roles } from '../auth/decorators/roles.decortor';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestedUser } from '../common/interfaces/requested-user.interface';
 import { Permissions } from 'src/auth/decorators/permissions.decorator';
-
+import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
 
 @ApiTags('requests')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('requests')
 export class RequestsController {
-  constructor(private readonly requestsService: RequestsService) { }
+  constructor(private readonly requestsService: RequestsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new blood request', description: 'Allows a registered hospital user to submit a new blood request.' })
+  @ApiOperation({
+    summary: 'Create a new blood request',
+    description:
+      'Allows a registered hospital user to submit a new blood request.',
+  })
   @Permissions('request.create')
   requestBlood(
     @CurrentUser() user: RequestedUser,
@@ -44,7 +48,11 @@ export class RequestsController {
   }
 
   @Get('my-requests')
-  @ApiOperation({ summary: 'Get user specific blood requests', description: 'A registered hospital user can get user specific blood requests using this endpoint.' })
+  @ApiOperation({
+    summary: 'Get user specific blood requests',
+    description:
+      'A registered hospital user can get user specific blood requests using this endpoint.',
+  })
   @Permissions('request.access')
   findMyRequests(
     @CurrentUser() user: RequestedUser,
@@ -56,9 +64,16 @@ export class RequestsController {
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'STAFF')
-  @ApiOperation({ summary: 'Get a blood request by ID (Admin & Staff only)', description: 'Admin or Staff can get a blood request by ID using this endpoint.' })
+  @ApiOperation({
+    summary: 'Get a blood request by ID (Admin & Staff only)',
+    description:
+      'Admin or Staff can get a blood request by ID using this endpoint.',
+  })
   @Permissions('request.access')
-  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestedUser) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestedUser,
+  ) {
     return this.requestsService.findOne(id, user.hospital_id);
   }
 
@@ -66,31 +81,56 @@ export class RequestsController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'STAFF')
   @Patch(':id')
-  @ApiOperation({ summary: 'Update blood request status (Admin & Staff only)', description: 'Admin or Staff can accept or reject a blood request using this endpoint.' })
+  @ApiOperation({
+    summary: 'Update blood request status (Admin & Staff only)',
+    description:
+      'Admin or Staff can accept or reject a blood request using this endpoint.',
+  })
   @Permissions('request.update')
   updateStatus(
     @CurrentUser() user: RequestedUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateRequestStatusDto: UpdateRequestStatusDto,
   ) {
-    return this.requestsService.updateStatus(id, user.id, updateRequestStatusDto, user.hospital_id);
+    return this.requestsService.updateStatus(
+      id,
+      user.id,
+      updateRequestStatusDto,
+      user.hospital_id,
+    );
   }
 
   @UseGuards(RolesGuard)
   @Permissions('request.access')
   @Roles('ADMIN', 'STAFF')
   @Get()
-  @ApiOperation({ summary: 'Get all blood requests (Admin & Staff only)', description: 'Admin or Staff can get all blood requests using this endpoint.' })
-  findAll(@Query() query: RequestsQueryDto, @CurrentUser() user: RequestedUser) {
+  @ApiOperation({
+    summary: 'Get all blood requests (Admin & Staff only)',
+    description:
+      'Admin or Staff can get all blood requests using this endpoint.',
+  })
+  findAll(
+    @Query() query: RequestsQueryDto,
+    @CurrentUser() user: RequestedUser,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
     return this.requestsService.findAll(query, user.hospital_id);
   }
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a blood request (Admin only)', description: 'Admin can delete a blood request using this endpoint.' })
+  @ApiOperation({
+    summary: 'Delete a blood request (Admin only)',
+    description: 'Admin can delete a blood request using this endpoint.',
+  })
   @Permissions('request.delete')
-  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestedUser) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestedUser,
+  ) {
     return this.requestsService.remove(id, user.hospital_id);
   }
 }

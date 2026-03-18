@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RequestsRepository } from './requests.repository';
 import { DatabaseService } from '../database/database.service';
-import { RequestStatus, BloodGroup, UrgencyLevel } from 'prisma/generated/client';
+import {
+  RequestStatus,
+  BloodGroup,
+  UrgencyLevel,
+} from 'prisma/generated/client';
 
 describe('RequestsRepository', () => {
   let repository: RequestsRepository;
@@ -50,16 +54,31 @@ describe('RequestsRepository', () => {
       };
       mockDbService.bloodRequest.findFirst.mockResolvedValue({ id: 'req-1' });
 
-      const result = await repository.findPendingRequestByUserAndHospital('user-1', 'hosp-1');
+      const result = await repository.findPendingRequestByUserAndHospital(
+        'user-1',
+        'hosp-1',
+      );
 
-      expect(dbService.bloodRequest.findFirst).toHaveBeenCalledWith(expectedQuery);
+      expect(dbService.bloodRequest.findFirst).toHaveBeenCalledWith(
+        expectedQuery,
+      );
       expect(result).toEqual({ id: 'req-1' });
     });
   });
 
   describe('create', () => {
     it('should create a request and return selected fields', async () => {
-      const inputData = { user_id: '1', hospital_id: '2', blood_group: BloodGroup.A_POS, urgency: UrgencyLevel.high, patient_name: 'test', units_required: 1, contact_phone: '1', required_date: new Date(), reason: 'test' };
+      const inputData = {
+        user_id: '1',
+        hospital_id: '2',
+        blood_group: BloodGroup.A_POS,
+        urgency: UrgencyLevel.high,
+        patient_name: 'test',
+        units_required: 1,
+        contact_phone: '1',
+        required_date: new Date(),
+        reason: 'test',
+      };
       mockDbService.bloodRequest.create.mockResolvedValue({ id: 'req-2' });
 
       await repository.create(inputData);
@@ -104,7 +123,7 @@ describe('RequestsRepository', () => {
 
       expect(dbService.bloodRequest.update).toHaveBeenCalledWith({
         where: { id: 'req-1' },
-        data: { deleted_at: expect.any(Date) },
+        data: { deleted_at: expect.any(Date) as Date },
       });
     });
   });
@@ -137,7 +156,7 @@ describe('RequestsRepository', () => {
       expect(count).toBe(100);
     });
   });
- 
+
   describe('updateStatus', () => {
     it('should execute an update on the db', async () => {
       mockDbService.bloodRequest.update.mockResolvedValue({ id: 'req-1' });

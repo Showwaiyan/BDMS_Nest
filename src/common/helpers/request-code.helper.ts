@@ -1,3 +1,5 @@
+import { randomInt } from 'crypto';
+
 export const generateRequestCode = () => {
-    return `REQ-${Math.floor(100000 + Math.random() * 900000)}`;
-}
+  return `REQ-${randomInt(100000, 1000000)}`;
+};
