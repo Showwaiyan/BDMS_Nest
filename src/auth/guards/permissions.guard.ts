@@ -22,9 +22,7 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context
-      .switchToHttp()
-      .getRequest<{ user: requestedUserInterface.RequestedUser }>();
+    const { user } = context.switchToHttp().getRequest();
 
     if (!user || !user.permissions) {
       throw new ForbiddenException('You do not have the required permissions');

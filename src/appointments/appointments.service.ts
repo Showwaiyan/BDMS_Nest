@@ -6,6 +6,8 @@ import {
 } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { QueryAppointmentDto } from './dto/query-appointment.dto';
+import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import { AppointmentStatus } from 'prisma/generated/client';
 
 @Injectable()
 export class AppointmentsService {
@@ -41,8 +43,59 @@ export class AppointmentsService {
     return request.user_id;
   }
 
-  create(createAppointmentDto: CreateAppointmentDto) {
-    return 'This action adds a new appointment';
+  private async handleBloodInventory(bloodRequestId: string): Promise<void> {
+    // TODO: Implement blood inventory logic
+    // 1. Find nearly expired blood from blood inventory
+    // 2. Update blood inventory entry status to 'used' with request id
+    void bloodRequestId;
+    console.log(
+      `[PLACEHOLDER] Finding nearly expired blood for request: ${bloodRequestId}`,
+    );
+    console.log(`[PLACEHOLDER] Updating blood inventory status to 'used'`);
+  }
+
+  private async updateBloodRequestStatus(
+    bloodRequestId: string,
+  ): Promise<void> {
+    // TODO: Update blood request status to 'fulfilled'
+    void bloodRequestId;
+    console.log(
+      `[PLACEHOLDER] Updating blood request ${bloodRequestId} status to 'fulfilled'`,
+    );
+  }
+
+  async create(userId: string, dto: CreateAppointmentDto) {
+    const userIdFromRecord = await this.getUserIdFromBloodRequest(
+      dto.blood_request_id,
+    );
+
+    if (
+      !this.validateFutureDateTime(dto.appointment_date, dto.appointment_time)
+    ) {
+      throw new BadRequestException(
+        'Appointment date and time must be in the future',
+      );
+    }
+
+    await this.handleBloodInventory(dto.blood_request_id);
+    await this.updateBloodRequestStatus(dto.blood_request_id);
+
+    const appointment = await this.database.appointment.create({
+      data: {
+        user_id: userIdFromRecord,
+        hospital_id: dto.hospital_id,
+        blood_request_id: dto.blood_request_id,
+        appointment_date: new Date(dto.appointment_date),
+        appointment_time: dto.appointment_time,
+        remarks: dto.remarks,
+        status: 'scheduled',
+      },
+    });
+
+    return {
+      message: 'Appointment created successfully',
+      data: appointment,
+    };
   }
 
   async findAppointments(query: QueryAppointmentDto) {
@@ -50,7 +103,12 @@ export class AppointmentsService {
     const limit = query.limit ?? 10;
     const { hospital_id, status, from_date, to_date } = query;
 
-    const where: any = { deleted_at: null };
+    const where: {
+      deleted_at: null;
+      hospital_id?: string;
+      status?: AppointmentStatus;
+      appointment_date?: { gte?: Date; lte?: Date };
+    } = { deleted_at: null };
 
     if (hospital_id) where.hospital_id = hospital_id;
     if (status) where.status = status;
@@ -103,11 +161,6 @@ export class AppointmentsService {
     };
   }
 
-<<<<<<< HEAD
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, updateAppointmentDto: UpdateAppointmentDto) {
-    return `This action updates a #${id} appointment`;
-=======
   async update(id: string, dto: UpdateAppointmentDto) {
     const appointment = await this.database.appointment.findUnique({
       where: { id, deleted_at: null },
@@ -150,10 +203,9 @@ export class AppointmentsService {
       message: 'Appointment updated successfully',
       data: updated,
     };
->>>>>>> 9a19064 (feat(appointments): implement findAppointments with pagination, findOne, update, updateStatus, remove)
   }
 
-  async updateStatus(id: string, dto: { status: string }) {
+  async updateStatus(id: string, dto: UpdateAppointmentStatusDto) {
     const appointment = await this.database.appointment.findUnique({
       where: { id, deleted_at: null },
     });
@@ -164,7 +216,7 @@ export class AppointmentsService {
 
     const updated = await this.database.appointment.update({
       where: { id },
-      data: { status: dto.status as any },
+      data: { status: dto.status },
     });
 
     return {
