@@ -44,24 +44,50 @@ export class AppointmentsService {
   }
 
   private async handleBloodInventory(bloodRequestId: string): Promise<void> {
-    // TODO: Implement blood inventory logic
-    // 1. Find nearly expired blood from blood inventory
-    // 2. Update blood inventory entry status to 'used' with request id
-    void bloodRequestId;
-    console.log(
-      `[PLACEHOLDER] Finding nearly expired blood for request: ${bloodRequestId}`,
-    );
-    console.log(`[PLACEHOLDER] Updating blood inventory status to 'used'`);
+    const bloodRequest = await this.database.bloodRequest.findUnique({
+      where: { id: bloodRequestId },
+      select: {
+        blood_group: true,
+        units_required: true,
+        hospital_id: true,
+      },
+    });
+
+    if (!bloodRequest) {
+      throw new NotFoundException(
+        `Blood request with id ${bloodRequestId} not found`,
+      );
+    }
+
+    const inventory = await this.database.bloodInventory.findFirst({
+      where: {
+        hospital_id: bloodRequest.hospital_id,
+        blood_group: bloodRequest.blood_group,
+        status: 'available',
+        deleted_at: null,
+        expired_at: { gt: new Date() },
+      },
+      orderBy: { expired_at: 'asc' },
+    });
+
+    if (inventory) {
+      await this.database.bloodInventory.update({
+        where: { id: inventory.id },
+        data: {
+          status: 'used',
+          blood_request_id: bloodRequestId,
+        },
+      });
+    }
   }
 
   private async updateBloodRequestStatus(
     bloodRequestId: string,
   ): Promise<void> {
-    // TODO: Update blood request status to 'fulfilled'
-    void bloodRequestId;
-    console.log(
-      `[PLACEHOLDER] Updating blood request ${bloodRequestId} status to 'fulfilled'`,
-    );
+    await this.database.bloodRequest.update({
+      where: { id: bloodRequestId },
+      data: { status: 'fulfilled' },
+    });
   }
 
   async create(userId: string, dto: CreateAppointmentDto) {
@@ -86,7 +112,9 @@ export class AppointmentsService {
         hospital_id: dto.hospital_id,
         blood_request_id: dto.blood_request_id,
         appointment_date: new Date(dto.appointment_date),
-        appointment_time: dto.appointment_time,
+        appointment_time: new Date(
+          `${dto.appointment_date}T${dto.appointment_time}:00`,
+        ),
         remarks: dto.remarks,
         status: 'scheduled',
       },
@@ -194,7 +222,11 @@ export class AppointmentsService {
         appointment_date: dto.appointment_date
           ? new Date(dto.appointment_date)
           : undefined,
-        appointment_time: dto.appointment_time,
+        appointment_time: dto.appointment_time
+          ? new Date(
+              `${dto.appointment_date || appointment.appointment_date.toISOString().split('T')[0]}T${dto.appointment_time}:00`,
+            )
+          : undefined,
         remarks: dto.remarks,
       },
     });
