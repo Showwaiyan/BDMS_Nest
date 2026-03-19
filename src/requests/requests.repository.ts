@@ -100,13 +100,32 @@ export class RequestsRepository {
 
   async updateStatusIfPending(
     id: string,
-    data: Prisma.BloodRequestUpdateInput,
+    data: Prisma.BloodRequestUncheckedUpdateInput,
+    hospitalId?: string,
+    userId?: string,
+  ) {
+    const updated = await this.prisma.bloodRequest.updateMany({
+      where: {
+        id,
+        status: RequestStatus.pending,
+        hospital_id: hospitalId,
+        user_id: userId,
+      },
+      data,
+    });
+    // number of rows updated
+    return updated.count;
+  }
+
+  async updateStatusIfApproved(
+    id: string,
+    data: Prisma.BloodRequestUncheckedUpdateInput,
     hospitalId?: string,
   ) {
     const updated = await this.prisma.bloodRequest.updateMany({
       where: {
         id,
-        status: 'pending',
+        status: RequestStatus.approved,
         hospital_id: hospitalId,
       },
       data,

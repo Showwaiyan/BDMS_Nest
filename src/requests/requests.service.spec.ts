@@ -35,6 +35,7 @@ describe('RequestsService', () => {
     count: jest.fn(),
     updateStatus: jest.fn(),
     updateStatusIfPending: jest.fn(),
+    updateStatusIfApproved: jest.fn(),
   };
 
   // Before each test: create module with real service + mock repo
@@ -162,6 +163,20 @@ describe('RequestsService', () => {
       );
       expect(repo.delete).not.toHaveBeenCalled();
     });
+
+    // Fulfilled -> throw
+    it('should throw BadRequestException if request is fulfilled', async () => {
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
+        id: 'request-123',
+        status: RequestStatus.fulfilled,
+        hospital_id: 'hosp-1',
+      });
+
+      await expect(service.remove('request-123', 'hosp-1')).rejects.toThrow(
+        'Fulfilled requests cannot be deleted.',
+      );
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
   });
 
   // --- findMyRequests ---
@@ -177,11 +192,42 @@ describe('RequestsService', () => {
 
       const result = await service.findMyRequests(userId, mockQuery);
 
-      expect(repo.findManyByCriteria).toHaveBeenCalled();
-      expect(repo.count).toHaveBeenCalledWith({ user_id: userId });
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        { user_id: userId, status: RequestStatus.pending, deleted_at: null },
+        0,
+        10,
+      );
+      expect(repo.count).toHaveBeenCalledWith({
+        user_id: userId,
+        status: RequestStatus.pending,
+        deleted_at: null,
+      });
       expect(result.message).toBe('My requests fetched successfully');
       expect(result.data.data).toEqual(mockData);
       expect(result.data.meta.total).toBe(2);
+    });
+
+    it('should apply filters (status, urgency) if provided', async () => {
+      const mockQuery = {
+        page: 1,
+        limit: 10,
+        status: RequestStatus.approved,
+        urgency: UrgencyLevel.medium,
+      };
+      const userId = 'user-123';
+
+      await service.findMyRequests(userId, mockQuery);
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        {
+          user_id: userId,
+          status: RequestStatus.approved,
+          urgency: UrgencyLevel.medium,
+          deleted_at: null,
+        },
+        0,
+        10,
+      );
     });
   });
 
@@ -194,10 +240,13 @@ describe('RequestsService', () => {
         status: RequestStatus.pending,
         hospital_id: 'hosp-1',
       };
+      // findRequestOrThrow uses findByIdWithoutSelect internally
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue(mockRequest);
       mockRequestsRepo.findById.mockResolvedValue(mockRequest);
 
       const result = await service.findOne('request-123', 'hosp-1');
 
+      expect(repo.findByIdWithoutSelect).toHaveBeenCalledWith('request-123');
       expect(repo.findById).toHaveBeenCalledWith('request-123');
       expect(result.message).toBe('Request fetched successfully');
       expect(result.data).toEqual(mockRequest);
@@ -205,7 +254,7 @@ describe('RequestsService', () => {
 
     // Not found -> throw
     it('should throw NotFoundException if request is not found', async () => {
-      mockRequestsRepo.findById.mockResolvedValue(null);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue(null);
 
       await expect(service.findOne('request-123', 'hosp-1')).rejects.toThrow(
         NotFoundException,
@@ -214,12 +263,11 @@ describe('RequestsService', () => {
 
     // Wrong hospital -> throw
     it('should throw NotFoundException if request belongs to another hospital', async () => {
-      const mockRequest = {
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
         id: 'request-123',
         status: RequestStatus.pending,
         hospital_id: 'hosp-2', // mismatch
-      };
-      mockRequestsRepo.findById.mockResolvedValue(mockRequest);
+      });
 
       await expect(service.findOne('request-123', 'hosp-1')).rejects.toThrow(
         NotFoundException,
@@ -239,7 +287,11 @@ describe('RequestsService', () => {
 
       const result = await service.findAll(mockQuery, 'hosp-1');
 
-      const expectedWhere = { hospital_id: 'hosp-1' };
+      const expectedWhere = {
+        hospital_id: 'hosp-1',
+        status: RequestStatus.pending,
+        deleted_at: null,
+      };
       expect(repo.findManyByCriteria).toHaveBeenCalledWith(
         expectedWhere,
         0,
@@ -249,6 +301,106 @@ describe('RequestsService', () => {
       expect(result.message).toBe('All requests fetched successfully');
       expect(result.data.data).toEqual(mockData);
       expect(result.data.meta.total).toBe(2);
+    });
+
+    it('should apply filters (status, urgency) if provided', async () => {
+      const mockQuery = {
+        page: 1,
+        limit: 10,
+        status: RequestStatus.pending,
+        urgency: UrgencyLevel.critical,
+      };
+
+      await service.findAll(mockQuery, 'hosp-1');
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        {
+          hospital_id: 'hosp-1',
+          status: RequestStatus.pending,
+          urgency: UrgencyLevel.critical,
+          deleted_at: null,
+        },
+        0,
+        10,
+      );
+    });
+
+    it('should filter by blood_group and user_id', async () => {
+      const mockQuery = {
+        page: 1,
+        limit: 10,
+        blood_group: BloodGroup.A_POS,
+        user_id: 'user-1',
+      };
+      await service.findAll(mockQuery, 'hosp-1');
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          blood_group: BloodGroup.A_POS,
+          user_id: 'user-1',
+        }),
+        0,
+        10,
+      );
+    });
+
+    it('should filter by search (patient name)', async () => {
+      const mockQuery = {
+        page: 1,
+        limit: 10,
+        search: 'John',
+      };
+      await service.findAll(mockQuery, 'hosp-1');
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          OR: [
+            { patient_name: { contains: 'John', mode: 'insensitive' } },
+            { blood_request_code: { contains: 'John', mode: 'insensitive' } },
+          ],
+        }),
+        0,
+        10,
+      );
+    });
+
+    it('should filter by date range (from_date to to_date)', async () => {
+      const mockQuery = {
+        page: 1,
+        limit: 10,
+        from_date: '2026-03-01',
+        to_date: '2026-03-31',
+      };
+      await service.findAll(mockQuery, 'hosp-1');
+
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          required_date: {
+            gte: new Date('2026-03-01'),
+            lte: new Date('2026-03-31'),
+          },
+        }),
+        0,
+        10,
+      );
+    });
+
+    it('should handle soft-delete visibility (with_deleted)', async () => {
+      // Default: with_deleted = false -> deleted_at: null
+      await service.findAll({ page: 1, limit: 10 }, 'hosp-1');
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({ deleted_at: null }),
+        0,
+        10,
+      );
+
+      // Explicitly show deleted: with_deleted = true -> deleted_at not in where
+      await service.findAll(
+        { page: 1, limit: 10, with_deleted: true },
+        'hosp-1',
+      );
+      const lastCall = mockRequestsRepo.findManyByCriteria.mock.calls.at(-1)[0];
+      expect(lastCall).not.toHaveProperty('deleted_at');
     });
   });
 
@@ -337,7 +489,7 @@ describe('RequestsService', () => {
         service.updateStatus('request-123', adminId, {
           status: RequestStatus.rejected,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Cannot update status. Request is already approved');
     });
 
     // Reject -> only status is set, no approved_by/at fields
@@ -371,6 +523,126 @@ describe('RequestsService', () => {
           status: RequestStatus.pending,
         }),
       ).rejects.toThrow('Only approved or rejected statuses are allowed');
+    });
+  });
+
+  // --- approveRequest ---
+  describe('approveRequest', () => {
+    it('should approve a pending request', async () => {
+      mockRequestsRepo.updateStatusIfPending.mockResolvedValue(1);
+      mockRequestsRepo.findById.mockResolvedValue({
+        status: RequestStatus.approved,
+      });
+
+      const result = await service.approveRequest('req-1', 'admin-1', 'hosp-1');
+
+      expect(repo.updateStatusIfPending).toHaveBeenCalledWith(
+        'req-1',
+        {
+          status: RequestStatus.approved,
+          approved_by: 'admin-1',
+          approved_at: expect.any(Date) as Date,
+        },
+        'hosp-1',
+      );
+      expect(result.message).toBe(
+        'Request status updated to approved successfully',
+      );
+    });
+
+    it('should throw error if request is already cancelled', async () => {
+      mockRequestsRepo.updateStatusIfPending.mockResolvedValue(0);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
+        status: RequestStatus.cancelled,
+      });
+
+      await expect(service.approveRequest('req-1', 'admin-1')).rejects.toThrow(
+        'Cannot approve request. It is already cancelled',
+      );
+    });
+  });
+
+  // --- fulfillRequest ---
+  describe('fulfillRequest', () => {
+    it('should fulfill an approved request', async () => {
+      mockRequestsRepo.updateStatusIfApproved.mockResolvedValue(1);
+      mockRequestsRepo.findById.mockResolvedValue({
+        status: RequestStatus.fulfilled,
+      });
+
+      const result = await service.fulfillRequest('req-1', 'hosp-1');
+
+      expect(repo.updateStatusIfApproved).toHaveBeenCalledWith(
+        'req-1',
+        { status: RequestStatus.fulfilled },
+        'hosp-1',
+      );
+      expect(result.message).toBe('Request fulfilled successfully');
+    });
+
+    it('should throw BadRequestException if request is not approved', async () => {
+      mockRequestsRepo.updateStatusIfApproved.mockResolvedValue(0);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
+        status: RequestStatus.pending,
+        hospital_id: 'hosp-1',
+      });
+
+      await expect(service.fulfillRequest('req-1', 'hosp-1')).rejects.toThrow(
+        'Cannot fulfill request. Status is pending, but must be approved',
+      );
+    });
+
+    it('should throw BadRequestException if request is already fulfilled', async () => {
+      mockRequestsRepo.updateStatusIfApproved.mockResolvedValue(0);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
+        status: RequestStatus.fulfilled,
+        hospital_id: 'hosp-1',
+      });
+
+      await expect(service.fulfillRequest('req-1', 'hosp-1')).rejects.toThrow(
+        'Cannot fulfill request. Status is fulfilled, but must be approved',
+      );
+    });
+  });
+
+  // --- cancelRequest ---
+  describe('cancelRequest', () => {
+    it('should cancel a pending request belonging to the user', async () => {
+      mockRequestsRepo.updateStatusIfPending.mockResolvedValue(1);
+      mockRequestsRepo.findById.mockResolvedValue({
+        status: RequestStatus.cancelled,
+      });
+
+      const result = await service.cancelRequest('req-1', 'user-1', 'hosp-1');
+
+      expect(repo.updateStatusIfPending).toHaveBeenCalledWith(
+        'req-1',
+        { status: RequestStatus.cancelled },
+        'hosp-1',
+        'user-1',
+      );
+      expect(result.message).toBe('Request cancelled successfully');
+    });
+
+    it('should throw NotFoundException if request not found or not owned by user', async () => {
+      mockRequestsRepo.updateStatusIfPending.mockResolvedValue(0);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue(null);
+
+      await expect(service.cancelRequest('req-1', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException if request is already approved', async () => {
+      mockRequestsRepo.updateStatusIfPending.mockResolvedValue(0);
+      mockRequestsRepo.findByIdWithoutSelect.mockResolvedValue({
+        status: RequestStatus.approved,
+        user_id: 'user-1',
+      });
+
+      await expect(service.cancelRequest('req-1', 'user-1')).rejects.toThrow(
+        'Cannot cancel request. It is already approved',
+      );
     });
   });
 });

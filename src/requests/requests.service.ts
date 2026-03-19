@@ -14,7 +14,7 @@ import { generateRequestCode } from 'src/common/helpers/request-code.helper';
 
 @Injectable()
 export class RequestsService {
-  constructor(private readonly requestsRepo: RequestsRepository) {}
+  constructor(private readonly requestsRepo: RequestsRepository) { }
 
   async requestBlood(user: RequestedUser, createRequestDto: CreateRequestDto) {
     if (!user.hospital_id) {
@@ -72,9 +72,12 @@ export class RequestsService {
   }
 
   async remove(id: string, hospitalId?: string) {
-    const existing = await this.requestsRepo.findByIdWithoutSelect(id);
-    if (!existing || (hospitalId && existing.hospital_id !== hospitalId)) {
-      throw new NotFoundException('Blood request not found');
+    const request = await this.findRequestOrThrow(id, { hospitalId });
+
+    if (request.status === RequestStatus.fulfilled) {
+      throw new BadRequestException(
+        'Fulfilled requests cannot be deleted.',
+      );
     }
 
     await this.requestsRepo.delete(id);
@@ -89,9 +92,7 @@ export class RequestsService {
     const { page, limit } = query;
     const { skip, take } = paginate(page, limit);
 
-    const where: Prisma.BloodRequestWhereInput = {
-      user_id: userId,
-    };
+    const where = this.getSearchCriteria(query, { user_id: userId });
 
     const [data, total] = await Promise.all([
       this.requestsRepo.findManyByCriteria(where, skip, take),
@@ -105,12 +106,9 @@ export class RequestsService {
   }
 
   async findOne(id: string, hospitalId?: string) {
+    await this.findRequestOrThrow(id, { hospitalId });
+
     const request = await this.requestsRepo.findById(id);
-
-    if (!request || (hospitalId && request.hospital_id !== hospitalId)) {
-      throw new NotFoundException('Blood request not found');
-    }
-
     return {
       message: 'Request fetched successfully',
       data: request,
@@ -121,9 +119,9 @@ export class RequestsService {
     const { page, limit } = query;
     const { skip, take } = paginate(page, limit);
 
-    const where: Prisma.BloodRequestWhereInput = {
+    const where = this.getSearchCriteria(query, {
       ...(hospitalId && { hospital_id: hospitalId }),
-    };
+    });
 
     const [data, total] = await Promise.all([
       this.requestsRepo.findManyByCriteria(where, skip, take),
@@ -162,26 +160,167 @@ export class RequestsService {
     );
 
     if (request === 0) {
-      const existingRequest = await this.requestsRepo.findByIdWithoutSelect(id);
-
-      if (
-        !existingRequest ||
-        (hospitalId && existingRequest.hospital_id !== hospitalId)
-      ) {
-        throw new NotFoundException('Blood request not found');
-      }
-
-      if (existingRequest.status !== RequestStatus.pending) {
-        throw new BadRequestException(
-          'Request is already approved or rejected',
-        );
-      }
+      const existing = await this.findRequestOrThrow(id, { hospitalId });
+      throw new BadRequestException(
+        `Cannot update status. Request is already ${existing.status}`,
+      );
     }
 
     const updatedRequest = await this.requestsRepo.findById(id);
     return {
       message: `Request status updated to ${dto.status} successfully`,
       data: updatedRequest,
+    };
+  }
+
+  async approveRequest(id: string, adminId: string, hospitalId?: string) {
+    // find pending, then update status to approved, add admin id and approved at
+    const request = await this.requestsRepo.updateStatusIfPending(
+      id,
+      {
+        status: RequestStatus.approved,
+        approved_by: adminId,
+        approved_at: new Date(),
+      },
+      hospitalId,
+    );
+
+    // if request is 0, it means the request is not found or not pending
+    if (request === 0) {
+      const existing = await this.findRequestOrThrow(id, { hospitalId });
+      throw new BadRequestException(
+        `Cannot approve request. It is already ${existing.status}`,
+      );
+    }
+
+    const updatedRequest = await this.requestsRepo.findById(id);
+    return {
+      message: `Request status updated to approved successfully`,
+      data: updatedRequest,
+    };
+  }
+
+  async cancelRequest(id: string, userId: string, hospitalId?: string) {
+    // find pending, then update status to cancelled
+    const request = await this.requestsRepo.updateStatusIfPending(
+      id,
+      { status: RequestStatus.cancelled },
+      hospitalId,
+      userId,
+    );
+
+    if (request === 0) {
+      const existing = await this.findRequestOrThrow(id, {
+        hospitalId,
+        userId,
+      });
+      throw new BadRequestException(
+        `Cannot cancel request. It is already ${existing.status}`,
+      );
+    }
+
+    const updatedRequest = await this.requestsRepo.findById(id);
+    return {
+      message: 'Request cancelled successfully',
+      data: updatedRequest,
+    };
+  }
+
+  async fulfillRequest(id: string, hospitalId?: string) {
+    // find approved, then update status to fulfilled
+    const request = await this.requestsRepo.updateStatusIfApproved(
+      id,
+      { status: RequestStatus.fulfilled },
+      hospitalId,
+    );
+
+    if (request === 0) {
+      const existing = await this.findRequestOrThrow(id, { hospitalId });
+      throw new BadRequestException(
+        `Cannot fulfill request. Status is ${existing.status}, but must be approved`,
+      );
+    }
+
+    const updatedRequest = await this.requestsRepo.findById(id);
+    return {
+      message: 'Request fulfilled successfully',
+      data: updatedRequest,
+    };
+  }
+
+  private async findRequestOrThrow(
+    id: string,
+    options: {
+      userId?: string;
+      hospitalId?: string;
+      expectedStatus?: RequestStatus;
+      notFoundMessage?: string;
+      statusErrorMessage?: string;
+    } = {},
+  ) {
+    // find request by id without select
+    const existingRequest = await this.requestsRepo.findByIdWithoutSelect(id);
+
+    // check if request exists and user has access
+    if (
+      !existingRequest ||
+      (options.hospitalId &&
+        existingRequest.hospital_id !== options.hospitalId) ||
+      (options.userId && existingRequest.user_id !== options.userId)
+    ) {
+      throw new NotFoundException(
+        options.notFoundMessage || 'Blood request not found',
+      );
+    }
+
+    // check if request status is as expected
+    if (
+      options?.expectedStatus &&
+      existingRequest.status !== options.expectedStatus
+    ) {
+      throw new BadRequestException(
+        options.statusErrorMessage ||
+        `Expected status: ${options.expectedStatus}, got: ${existingRequest.status}`,
+      );
+    }
+
+    return existingRequest;
+  }
+
+  private getSearchCriteria(
+    query: RequestsQueryDto,
+    filters: Prisma.BloodRequestWhereInput,
+  ): Prisma.BloodRequestWhereInput {
+    const {
+      status,
+      urgency,
+      blood_group,
+      user_id,
+      search,
+      from_date,
+      to_date,
+      with_deleted,
+    } = query;
+
+    return {
+      ...filters,
+      status: status || RequestStatus.pending,
+      ...(urgency && { urgency }),
+      ...(blood_group && { blood_group }),
+      ...(user_id && { user_id }),
+      ...(!with_deleted && { deleted_at: null }),
+      ...(search && {
+        OR: [
+          { patient_name: { contains: search, mode: 'insensitive' } },
+          { blood_request_code: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+      ...((from_date || to_date) && {
+        required_date: {
+          ...(from_date && { gte: new Date(from_date) }),
+          ...(to_date && { lte: new Date(to_date) }),
+        },
+      }),
     };
   }
 }

@@ -22,6 +22,9 @@ describe('RequestsController', () => {
     findAll: jest.fn(),
     findOne: jest.fn(),
     updateStatus: jest.fn(),
+    approveRequest: jest.fn(),
+    fulfillRequest: jest.fn(),
+    cancelRequest: jest.fn(),
     remove: jest.fn(),
   };
 
@@ -125,6 +128,43 @@ describe('RequestsController', () => {
         'req-1',
         'user-1',
         dto,
+        'hosp-1',
+      );
+    });
+  });
+
+  describe('approve, fulfill, cancel', () => {
+    it('should call approveRequest', async () => {
+      mockRequestsService.approveRequest.mockResolvedValue({
+        message: 'Approved',
+      });
+      const result = await controller.approve('req-1', mockUser);
+      expect(result.message).toBe('Approved');
+      expect(service.approveRequest).toHaveBeenCalledWith(
+        'req-1',
+        'user-1',
+        'hosp-1',
+      );
+    });
+
+    it('should call fulfillRequest', async () => {
+      mockRequestsService.fulfillRequest.mockResolvedValue({
+        message: 'Fulfilled',
+      });
+      const result = await controller.fulfill('req-1', mockUser);
+      expect(result.message).toBe('Fulfilled');
+      expect(service.fulfillRequest).toHaveBeenCalledWith('req-1', 'hosp-1');
+    });
+
+    it('should call cancelRequest', async () => {
+      mockRequestsService.cancelRequest.mockResolvedValue({
+        message: 'Cancelled',
+      });
+      const result = await controller.cancel('req-1', mockUser);
+      expect(result.message).toBe('Cancelled');
+      expect(service.cancelRequest).toHaveBeenCalledWith(
+        'req-1',
+        'user-1',
         'hosp-1',
       );
     });

@@ -53,7 +53,7 @@ export class RequestsController {
     description:
       'A registered hospital user can get user specific blood requests using this endpoint.',
   })
-  @Permissions('request.access')
+  @Permissions('request.view')
   findMyRequests(
     @CurrentUser() user: RequestedUser,
     @Query() query: RequestsQueryDto,
@@ -62,14 +62,12 @@ export class RequestsController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'STAFF')
   @ApiOperation({
-    summary: 'Get a blood request by ID (Admin & Staff only)',
+    summary: 'Get a blood request by ID',
     description:
-      'Admin or Staff can get a blood request by ID using this endpoint.',
+      'Get a specific blood request by its ID. Requires request.view permission.',
   })
-  @Permissions('request.access')
+  @Permissions('request.view')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: RequestedUser,
@@ -98,6 +96,54 @@ export class RequestsController {
       updateRequestStatusDto,
       user.hospital_id,
     );
+  }
+  // Approve a pending blood request
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'STAFF')
+  @Patch(':id/approve')
+  @ApiOperation({
+    summary: 'Approve a pending blood request (Admin & Staff only)',
+    description:
+      'Admin or Staff can approve a pending blood request using this endpoint.',
+  })
+  @Permissions('request.update')
+  approve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestedUser,
+  ) {
+    return this.requestsService.approveRequest(id, user.id, user.hospital_id);
+  }
+
+  // Fulfill an approved blood request
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'STAFF')
+  @Patch(':id/fulfill')
+  @ApiOperation({
+    summary: 'Fulfill an approved blood request (Admin & Staff only)',
+    description:
+      'Admin or Staff can mark an approved blood request as fulfilled.',
+  })
+  @Permissions('request.update')
+  fulfill(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestedUser,
+  ) {
+    return this.requestsService.fulfillRequest(id, user.hospital_id);
+  }
+
+  // Cancel a pending blood request (user cancels own request)
+  @Patch(':id/cancel')
+  @ApiOperation({
+    summary: 'Cancel a pending blood request',
+    description:
+      'A user can cancel their own pending blood request using this endpoint.',
+  })
+  @Permissions('request.update')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestedUser,
+  ) {
+    return this.requestsService.cancelRequest(id, user.id, user.hospital_id);
   }
 
   @UseGuards(RolesGuard)
