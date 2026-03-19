@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
+import { AppointmentStatus } from 'prisma/generated/client';
 
 describe('AppointmentsController', () => {
   let controller: AppointmentsController;
-  let service: AppointmentsService;
 
   const mockService = {
     create: jest.fn(),
@@ -22,7 +22,6 @@ describe('AppointmentsController', () => {
     }).compile();
 
     controller = module.get<AppointmentsController>(AppointmentsController);
-    service = module.get<AppointmentsService>(AppointmentsService);
   });
 
   afterEach(() => {
@@ -38,7 +37,12 @@ describe('AppointmentsController', () => {
         appointment_time: '14:30',
         remarks: 'Test appointment',
       };
-      const req = { user: { userId: 'staff-user-123' } };
+      const user = {
+        id: 'staff-user-123',
+        user_name: 'staff',
+        role: 'STAFF',
+        permissions: [],
+      };
       const result = {
         message: 'Appointment created successfully',
         data: { id: 'apt-1' },
@@ -46,7 +50,7 @@ describe('AppointmentsController', () => {
 
       mockService.create.mockResolvedValue(result);
 
-      expect(await controller.create(req, dto)).toBe(result);
+      expect(await controller.create(user, dto)).toBe(result);
       expect(mockService.create).toHaveBeenCalledWith('staff-user-123', dto);
     });
   });
@@ -98,7 +102,7 @@ describe('AppointmentsController', () => {
 
   describe('updateStatus', () => {
     it('should update appointment status', async () => {
-      const dto = { status: 'confirmed' as any };
+      const dto = { status: 'confirmed' as AppointmentStatus };
       const result = {
         message: 'Appointment status updated successfully',
         data: { id: 'apt-1', status: 'confirmed' },

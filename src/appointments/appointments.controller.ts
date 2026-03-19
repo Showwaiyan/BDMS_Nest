@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
   UseGuards,
   Query,
 } from '@nestjs/common';
@@ -18,6 +17,8 @@ import { QueryAppointmentDto } from './dto/query-appointment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
 
 @Controller('appointments')
 export class AppointmentsController {
@@ -26,8 +27,11 @@ export class AppointmentsController {
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('appointment.create')
-  create(@Req() req: any, @Body() createAppointmentDto: CreateAppointmentDto) {
-    return this.appointmentsService.create(req.user.sub, createAppointmentDto);
+  create(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Body() createAppointmentDto: CreateAppointmentDto,
+  ) {
+    return this.appointmentsService.create(user.id, createAppointmentDto);
   }
 
   @Get()
