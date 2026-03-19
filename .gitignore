@@ -60,3 +60,7 @@ prisma/generated/
 
 # OpenCode configuration (local only)
 .opencode/
+
+# Project specific (do not commit)
+AGENTS.md
+docs/
