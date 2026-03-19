@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import {
   CreateAppointmentDto,
@@ -91,9 +95,27 @@ export class AppointmentsService {
   }
 
   async create(userId: string, dto: CreateAppointmentDto) {
-    const userIdFromRecord = await this.getUserIdFromBloodRequest(
-      dto.blood_request_id,
-    );
+    if (dto.type === AppointmentType.DONATION && !dto.donation_id) {
+      throw new BadRequestException(
+        'donation_id is required when type is donation',
+      );
+    }
+
+    if (dto.type === AppointmentType.REQUEST && !dto.blood_request_id) {
+      throw new BadRequestException(
+        'blood_request_id is required when type is request',
+      );
+    }
+
+    let userIdFromRecord = userId;
+
+    if (dto.type === AppointmentType.DONATION && dto.donation_id) {
+      userIdFromRecord = await this.getUserIdFromDonation(dto.donation_id);
+    } else if (dto.type === AppointmentType.REQUEST && dto.blood_request_id) {
+      userIdFromRecord = await this.getUserIdFromBloodRequest(
+        dto.blood_request_id,
+      );
+    }
 
     if (
       !this.validateFutureDateTime(dto.appointment_date, dto.appointment_time)
@@ -103,13 +125,16 @@ export class AppointmentsService {
       );
     }
 
-    await this.handleBloodInventory(dto.blood_request_id);
-    await this.updateBloodRequestStatus(dto.blood_request_id);
+    if (dto.type === AppointmentType.REQUEST && dto.blood_request_id) {
+      await this.handleBloodInventory(dto.blood_request_id);
+      await this.updateBloodRequestStatus(dto.blood_request_id);
+    }
 
     const appointment = await this.database.appointment.create({
       data: {
         user_id: userIdFromRecord,
         hospital_id: dto.hospital_id,
+        donation_id: dto.donation_id,
         blood_request_id: dto.blood_request_id,
         appointment_date: new Date(dto.appointment_date),
         appointment_time: new Date(

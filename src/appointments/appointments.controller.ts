@@ -6,32 +6,28 @@ import {
   Patch,
   Param,
   Delete,
-<<<<<<< HEAD
-=======
   Req,
   UseGuards,
   Query,
->>>>>>> 9a19064 (feat(appointments): implement findAppointments with pagination, findOne, update, updateStatus, remove)
 } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
-<<<<<<< HEAD
-=======
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { QueryAppointmentDto } from './dto/query-appointment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
->>>>>>> 9a19064 (feat(appointments): implement findAppointments with pagination, findOne, update, updateStatus, remove)
 
 @Controller('appointments')
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
-  create(@Body() createAppointmentDto: CreateAppointmentDto) {
-    return this.appointmentsService.create(createAppointmentDto);
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('appointment.create')
+  create(@Req() req: any, @Body() createAppointmentDto: CreateAppointmentDto) {
+    return this.appointmentsService.create(req.user.sub, createAppointmentDto);
   }
 
   @Get()

@@ -2,10 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   InternalServerErrorException,
-<<<<<<< HEAD
   BadRequestException,
-=======
->>>>>>> ce41233 (fix(appointments): resolve lint errors and type issues)
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -76,10 +73,7 @@ export class AuthService {
           user_name: user.user_name,
           email: user.email,
           role: user.role.name,
-<<<<<<< HEAD
           hospital_id: user.hospital_id ?? undefined,
-=======
->>>>>>> ce41233 (fix(appointments): resolve lint errors and type issues)
           permissions: user.role.role_permissions.map(
             (rp) => rp.permission.name,
           ),
