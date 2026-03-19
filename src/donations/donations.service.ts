@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { UpdateDonationDto } from './dto/update-donation.dto';
 import { DonationsQueryDto } from './dto/query/donations.dto';
-import { paginate, paginatedResult } from 'src/common/helpers/paginate.helper';
+import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 
 @Injectable()
 export class DonationsService {

@@ -21,29 +21,17 @@ async function bootstrap() {
     }),
   );
 
-  if (appConfig.nodeEnv !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('BDMS API')
-      .setDescription('The Blood Donation Management System API')
-      .setVersion('1.0')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-        'access-token',
-      )
-      .addSecurityRequirements('access-token') // global apply to the path
-      .build();
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('BDMS Nestjs API')
+    .setDescription(
+      'API documentation for the Blood Donation Management System built with NestJS',
+    )
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
 
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-    });
-  }
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
 
   app.enableCors();
   await app.listen(appConfig.port, '0.0.0.0');

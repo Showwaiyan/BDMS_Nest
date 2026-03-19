@@ -61,7 +61,6 @@ export class AuthService {
       user.id,
       user.user_name,
       user.role.name,
-      user.role.role_permissions.map((rp) => rp.permission.name),
       user.hospital_id ?? undefined,
     );
 
@@ -91,7 +90,6 @@ export class AuthService {
       user.id,
       user.user_name,
       user.role.name,
-      user.role.role_permissions.map((rp) => rp.permission.name),
     );
 
     return {
@@ -139,10 +137,9 @@ export class AuthService {
     userId: string,
     user_name: string,
     role: string,
-    permissions: string[],
     hospital_id?: string,
   ) {
-    const payload = { sub: userId, user_name, role, permissions, hospital_id };
+    const payload = { sub: userId, user_name, role, hospital_id };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {
