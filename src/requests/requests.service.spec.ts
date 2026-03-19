@@ -399,8 +399,11 @@ describe('RequestsService', () => {
         { page: 1, limit: 10, with_deleted: true },
         'hosp-1',
       );
-      const lastCall = mockRequestsRepo.findManyByCriteria.mock.calls.at(-1)[0];
-      expect(lastCall).not.toHaveProperty('deleted_at');
+      expect(repo.findManyByCriteria).toHaveBeenCalledWith(
+        { hospital_id: 'hosp-1', status: RequestStatus.pending },
+        0,
+        10,
+      );
     });
   });
 

@@ -14,7 +14,7 @@ import { generateRequestCode } from 'src/common/helpers/request-code.helper';
 
 @Injectable()
 export class RequestsService {
-  constructor(private readonly requestsRepo: RequestsRepository) { }
+  constructor(private readonly requestsRepo: RequestsRepository) {}
 
   async requestBlood(user: RequestedUser, createRequestDto: CreateRequestDto) {
     if (!user.hospital_id) {
@@ -75,9 +75,7 @@ export class RequestsService {
     const request = await this.findRequestOrThrow(id, { hospitalId });
 
     if (request.status === RequestStatus.fulfilled) {
-      throw new BadRequestException(
-        'Fulfilled requests cannot be deleted.',
-      );
+      throw new BadRequestException('Fulfilled requests cannot be deleted.');
     }
 
     await this.requestsRepo.delete(id);
@@ -280,7 +278,7 @@ export class RequestsService {
     ) {
       throw new BadRequestException(
         options.statusErrorMessage ||
-        `Expected status: ${options.expectedStatus}, got: ${existingRequest.status}`,
+          `Expected status: ${options.expectedStatus}, got: ${existingRequest.status}`,
       );
     }
 
