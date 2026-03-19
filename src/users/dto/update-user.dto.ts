@@ -1,6 +1,12 @@
-import { PartialType, OmitType } from '@nestjs/mapped-types';
-import { CreateUserDto } from './create-user.dto';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
-export class UpdateUserDto extends PartialType(
-  OmitType(CreateUserDto, ['user_name', 'role_id'] as const), //username and role_id not updateable via general update
-) {}
+export class UpdateUserDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  user_name?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+}

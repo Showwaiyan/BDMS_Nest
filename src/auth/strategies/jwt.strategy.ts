@@ -24,8 +24,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     role: string;
     hospital_id?: string;
   }): Promise<RequestedUser> {
-    const user = await this.databaseService.user.findUnique({
-      where: { id: payload.sub },
+    const user = await this.databaseService.user.findFirst({
+      where: {
+        id: payload.sub,
+        deleted_at: null,
+      },
       select: {
         is_active: true,
         role: {

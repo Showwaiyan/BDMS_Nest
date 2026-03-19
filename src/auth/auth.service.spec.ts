@@ -178,7 +178,6 @@ describe('AuthService', () => {
             email: 'john@example.com',
             role: 'USER',
             hospital_id: undefined,
-            permissions: ['user.view', 'donation.view'],
           },
           access_token: 'access-token',
           refresh_token: 'refresh-token',

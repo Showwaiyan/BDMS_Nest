@@ -27,8 +27,11 @@ export class JwtRefreshStrategy extends PassportStrategy(
     iat: number;
     exp: number;
   }): Promise<RequestedUser> {
-    const user = await this.databaseService.user.findUnique({
-      where: { id: payload.sub },
+    const user = await this.databaseService.user.findFirst({
+      where: {
+        id: payload.sub,
+        deleted_at: null,
+      },
       select: {
         id: true,
         user_name: true,

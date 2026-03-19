@@ -19,13 +19,13 @@ import { Permissions } from 'src/auth/decorators/permissions.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // all roles: scoped to their own hospital
   @Permissions('user.access')
   @Get()
   findAll(
@@ -38,13 +38,11 @@ export class UsersController {
     return this.usersService.findAllPatients(dto, user.hospital_id);
   }
 
-  // get own profile
   @Get('me')
   getMe(@CurrentUser() user: requestedUserInterface.RequestedUser) {
-    return this.usersService.findOne(user.id);
+    return this.usersService.getMe(user.id);
   }
 
-  // admin only: list all STAFF in their hospital
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Permissions('user.access')
@@ -59,7 +57,6 @@ export class UsersController {
     return this.usersService.findStaffByHospital(user.hospital_id, dto);
   }
 
-  // admin only
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Permissions('user.view')
@@ -68,14 +65,14 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  // update own profile
-  // @Patch('me')
-  // updateMe(
-  //   @CurrentUser() user: requestedUserInterface.RequestedUser,
-  //   @Body() dto: UpdateUserDto,
-  // ) {
-  //   return this.usersService.update(user.id, dto);
-  // }
+  @Permissions('user.update')
+  @Patch('me')
+  updateMe(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Body() dto: UpdateUserDto,
+  ) {
+    return this.usersService.update(user.id, dto);
+  }
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')

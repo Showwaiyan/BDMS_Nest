@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import { DatabaseService } from '../database/database.service';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { UsersRepository } from './users.repository';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 jest.mock('bcryptjs', () => ({
@@ -11,40 +15,44 @@ jest.mock('bcryptjs', () => ({
 
 describe('UsersService', () => {
   let service: UsersService;
-  let databaseService: {
-    role: { findUnique: jest.Mock };
-    user: {
-      findUnique: jest.Mock;
-      create: jest.Mock;
-      findMany: jest.Mock;
-      count: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
-    };
+  let usersRepo: {
+    findRoleByName: jest.Mock;
+    findByUsername: jest.Mock;
+    findById: jest.Mock;
+    findPublicById: jest.Mock;
+    checkExistsByUsername: jest.Mock;
+    checkExistsByEmail: jest.Mock;
+    create: jest.Mock;
+    findManyByCriteria: jest.Mock;
+    count: jest.Mock;
+    updateById: jest.Mock;
+    updatePassword: jest.Mock;
+    softDelete: jest.Mock;
   };
   const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
   beforeEach(async () => {
-    databaseService = {
-      role: {
-        findUnique: jest.fn(),
-      },
-      user: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        findMany: jest.fn(),
-        count: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
-      },
+    usersRepo = {
+      findRoleByName: jest.fn(),
+      findByUsername: jest.fn(),
+      findById: jest.fn(),
+      findPublicById: jest.fn(),
+      checkExistsByUsername: jest.fn(),
+      checkExistsByEmail: jest.fn(),
+      create: jest.fn(),
+      findManyByCriteria: jest.fn(),
+      count: jest.fn(),
+      updateById: jest.fn(),
+      updatePassword: jest.fn(),
+      softDelete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         {
-          provide: DatabaseService,
-          useValue: databaseService,
+          provide: UsersRepository,
+          useValue: usersRepo,
         },
       ],
     }).compile();
@@ -58,21 +66,19 @@ describe('UsersService', () => {
 
   describe('findRoleByName', () => {
     it('should query role by name', async () => {
-      databaseService.role.findUnique.mockResolvedValue({ id: 'role-1' });
+      usersRepo.findRoleByName.mockResolvedValue({ id: 'role-1' });
 
       await expect(service.findRoleByName('USER')).resolves.toEqual({
         id: 'role-1',
       });
 
-      expect(databaseService.role.findUnique).toHaveBeenCalledWith({
-        where: { name: 'USER' },
-      });
+      expect(usersRepo.findRoleByName).toHaveBeenCalledWith('USER');
     });
   });
 
   describe('findById', () => {
     it('should throw when user does not exist', async () => {
-      databaseService.user.findUnique.mockResolvedValue(null);
+      usersRepo.findById.mockResolvedValue(null);
 
       await expect(service.findById('missing-id')).rejects.toBeInstanceOf(
         NotFoundException,
@@ -81,7 +87,7 @@ describe('UsersService', () => {
 
     it('should return user when found', async () => {
       const user = { id: 'user-1' };
-      databaseService.user.findUnique.mockResolvedValue(user);
+      usersRepo.findById.mockResolvedValue(user);
 
       await expect(service.findById('user-1')).resolves.toEqual(user);
     });
@@ -89,7 +95,7 @@ describe('UsersService', () => {
 
   describe('create', () => {
     it('should throw when username already exists', async () => {
-      databaseService.user.findUnique.mockResolvedValue({
+      usersRepo.checkExistsByUsername.mockResolvedValue({
         id: 'existing-user',
       });
 
@@ -103,10 +109,25 @@ describe('UsersService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
+    it('should throw when email already exists', async () => {
+      usersRepo.checkExistsByUsername.mockResolvedValue(null);
+      usersRepo.checkExistsByEmail.mockResolvedValue({ id: 'existing-user' });
+
+      await expect(
+        service.create({
+          user_name: 'john',
+          email: 'john@example.com',
+          password: 'password123',
+          role_id: 'role-1',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
     it('should hash password and create user', async () => {
-      databaseService.user.findUnique.mockResolvedValue(null);
+      usersRepo.checkExistsByUsername.mockResolvedValue(null);
+      usersRepo.checkExistsByEmail.mockResolvedValue(null);
       mockedBcrypt.hash.mockResolvedValueOnce('hashed-password' as never);
-      databaseService.user.create.mockResolvedValue({ id: 'user-1' });
+      usersRepo.create.mockResolvedValue({ id: 'user-1' });
 
       await expect(
         service.create({
@@ -117,14 +138,70 @@ describe('UsersService', () => {
         }),
       ).resolves.toEqual({ id: 'user-1' });
 
-      expect(databaseService.user.create).toHaveBeenCalledTimes(1);
+      expect(usersRepo.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('update', () => {
+    it('should throw when no fields are provided', async () => {
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        user_name: 'john',
+        email: 'john@example.com',
+      });
+
+      await expect(service.update('user-1', {})).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('should throw when username is already taken', async () => {
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        user_name: 'john',
+        email: 'john@example.com',
+      });
+      usersRepo.checkExistsByUsername.mockResolvedValue({ id: 'other-user' });
+
+      await expect(
+        service.update('user-1', { user_name: 'existing-name' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('should update email and username', async () => {
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        user_name: 'john',
+        email: 'john@example.com',
+      });
+      usersRepo.checkExistsByUsername.mockResolvedValue(null);
+      usersRepo.checkExistsByEmail.mockResolvedValue(null);
+      usersRepo.updateById.mockResolvedValue({
+        id: 'user-1',
+        user_name: 'johnny',
+        email: 'johnny@example.com',
+      });
+
+      await expect(
+        service.update('user-1', {
+          user_name: 'johnny',
+          email: 'johnny@example.com',
+        }),
+      ).resolves.toEqual({
+        message: 'User updated successfully',
+        data: {
+          id: 'user-1',
+          user_name: 'johnny',
+          email: 'johnny@example.com',
+        },
+      });
     });
   });
 
   describe('updateUserRole', () => {
     it('should throw when role does not exist', async () => {
-      databaseService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      databaseService.role.findUnique.mockResolvedValue(null);
+      usersRepo.findById.mockResolvedValue({ id: 'user-1' });
+      usersRepo.findRoleByName.mockResolvedValue(null);
 
       await expect(
         service.updateUserRole('user-1', 'STAFF'),
@@ -132,9 +209,9 @@ describe('UsersService', () => {
     });
 
     it('should update user role successfully', async () => {
-      databaseService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      databaseService.role.findUnique.mockResolvedValue({ id: 'role-staff' });
-      databaseService.user.update.mockResolvedValue({
+      usersRepo.findById.mockResolvedValue({ id: 'user-1' });
+      usersRepo.findRoleByName.mockResolvedValue({ id: 'role-staff' });
+      usersRepo.updateById.mockResolvedValue({
         id: 'user-1',
         role_id: 'role-staff',
       });
@@ -144,22 +221,19 @@ describe('UsersService', () => {
         data: { id: 'user-1', role_id: 'role-staff' },
       });
 
-      expect(databaseService.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'user-1' },
-          data: { role_id: 'role-staff' },
-        }),
-      );
+      expect(usersRepo.updateById).toHaveBeenCalledWith('user-1', {
+        role_id: 'role-staff',
+      });
     });
   });
 
   describe('toggleActive', () => {
     it('should toggle active status', async () => {
-      databaseService.user.findUnique.mockResolvedValue({
+      usersRepo.findById.mockResolvedValue({
         id: 'user-1',
         is_active: true,
       });
-      databaseService.user.update.mockResolvedValue({
+      usersRepo.updateById.mockResolvedValue({
         id: 'user-1',
         is_active: false,
       });
@@ -169,28 +243,23 @@ describe('UsersService', () => {
         data: { id: 'user-1', is_active: false },
       });
 
-      expect(databaseService.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'user-1' },
-          data: { is_active: false },
-        }),
-      );
+      expect(usersRepo.updateById).toHaveBeenCalledWith('user-1', {
+        is_active: false,
+      });
     });
   });
 
   describe('remove', () => {
-    it('should delete existing user', async () => {
-      databaseService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      databaseService.user.delete.mockResolvedValue({ id: 'user-1' });
+    it('should soft delete existing user', async () => {
+      usersRepo.findById.mockResolvedValue({ id: 'user-1' });
+      usersRepo.softDelete.mockResolvedValue({ id: 'user-1' });
 
       await expect(service.remove('user-1')).resolves.toEqual({
         message: 'User deleted successfully',
         data: null,
       });
 
-      expect(databaseService.user.delete).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-      });
+      expect(usersRepo.softDelete).toHaveBeenCalledWith('user-1');
     });
   });
 });

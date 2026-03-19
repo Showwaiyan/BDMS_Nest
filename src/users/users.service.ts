@@ -2,85 +2,30 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '../../prisma/generated/client';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: DatabaseService) {}
-
-  // currently selecting for general usage
-  // can be optimized further for specific cases if needed
-  private readonly selectUser: Prisma.UserSelect = {
-    id: true,
-    user_name: true,
-    email: true,
-    role_id: true,
-    hospital_id: true,
-    is_active: true,
-    created_at: true,
-    updated_at: true,
-    role: {
-      select: {
-        id: true,
-        name: true,
-        role_permissions: {
-          select: {
-            permission: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    },
-    password: false,
-  };
+  constructor(private readonly usersRepo: UsersRepository) {}
 
   async findRoleByName(name: string) {
-    return this.prisma.role.findUnique({
-      where: { name },
-    });
+    return this.usersRepo.findRoleByName(name);
   }
 
   async findByUsername(user_name: string) {
-    return this.prisma.user.findUnique({
-      where: { user_name },
-      include: {
-        role: {
-          include: {
-            role_permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    return this.usersRepo.findByUsername(user_name);
   }
 
   async findById(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        role: {
-          include: {
-            role_permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.usersRepo.findById(id);
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -92,10 +37,11 @@ export class UsersService {
   // internal use only - no response formatting or error handling here
   // for reducing db payload size
   async checkExistsByUsername(user_name: string) {
-    return this.prisma.user.findUnique({
-      where: { user_name },
-      select: { id: true },
-    });
+    return this.usersRepo.checkExistsByUsername(user_name);
+  }
+
+  async checkExistsByEmail(email: string) {
+    return this.usersRepo.checkExistsByEmail(email);
   }
 
   async create(dto: CreateUserDto) {
@@ -105,14 +51,16 @@ export class UsersService {
       throw new ConflictException('Username already taken');
     }
 
+    const existingEmail = await this.checkExistsByEmail(dto.email);
+    if (existingEmail) {
+      throw new ConflictException('Email already taken');
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    return this.prisma.user.create({
-      data: {
-        ...dto,
-        password: hashedPassword,
-      },
-      select: this.selectUser,
+    return this.usersRepo.create({
+      ...dto,
+      password: hashedPassword,
     });
   }
 
@@ -134,14 +82,8 @@ export class UsersService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        select: this.selectUser,
-        skip,
-        take,
-        orderBy: { created_at: 'desc' },
-      }),
-      this.prisma.user.count({ where }),
+      this.usersRepo.findManyByCriteria(where, skip, take),
+      this.usersRepo.count(where),
     ]);
 
     return {
@@ -150,7 +92,7 @@ export class UsersService {
     };
   }
 
-  // used by controller — always scoped to a hospital
+  // used by controller - always scoped to a hospital
   async findAllPatients(dto: PaginationDto, hospitalId: string) {
     const { page, limit, search } = dto;
     const { skip, take } = paginate(page, limit);
@@ -168,14 +110,8 @@ export class UsersService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        select: this.selectUser,
-        skip,
-        take,
-        orderBy: { created_at: 'desc' },
-      }),
-      this.prisma.user.count({ where }),
+      this.usersRepo.findManyByCriteria(where, skip, take),
+      this.usersRepo.count(where),
     ]);
 
     return {
@@ -184,8 +120,25 @@ export class UsersService {
     };
   }
 
+  async getMe(id: string) {
+    const user = await this.usersRepo.findMeProfile(id);
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    return {
+      message: 'Your profile fetched successfully',
+      data: user,
+    };
+  }
+
   async findOne(id: string) {
-    const user = await this.findById(id);
+    const user = await this.usersRepo.findProfileById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
     return {
       message: 'User fetched successfully',
@@ -193,41 +146,58 @@ export class UsersService {
     };
   }
 
-  // async update(id: string, dto: UpdateUserDto) {
-  //   await this.findById(id); // throws if not found
+  async update(id: string, dto: UpdateUserDto) {
+    const user = await this.findById(id);
 
-  //   const updateData: any = { ...dto };
+    if (!dto.email && !dto.user_name) {
+      throw new BadRequestException('At least one field must be provided');
+    }
 
-  //   if (updateData.password) {
-  //     updateData.password = await bcrypt.hash(updateData.password, 10);
-  //   }
+    if (dto.user_name && dto.user_name !== user.user_name) {
+      const existing = await this.usersRepo.checkExistsByUsername(
+        dto.user_name,
+        id,
+      );
+      if (existing) {
+        throw new ConflictException('Username already taken');
+      }
+    }
 
-  //   const user = await this.prisma.user.update({
-  //     where: { id },
-  //     data: updateData,
-  //     select: this.selectUser,
-  //   });
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.usersRepo.checkExistsByEmail(dto.email, id);
+      if (existing) {
+        throw new ConflictException('Email already taken');
+      }
+    }
 
-  //   return {
-  //     message: 'User updated successfully',
-  //     data: user,
-  //   };
-  // }
+    const updateData: Prisma.UserUncheckedUpdateInput = {};
+
+    if (dto.user_name) {
+      updateData.user_name = dto.user_name;
+    }
+
+    if (dto.email) {
+      updateData.email = dto.email;
+    }
+
+    const updatedUser = await this.usersRepo.updateById(id, updateData);
+
+    return {
+      message: 'User updated successfully',
+      data: updatedUser,
+    };
+  }
 
   async updateUserRole(id: string, role: 'USER' | 'STAFF' | 'ADMIN') {
     await this.findById(id); // throws if not found
-    const roleRecord = await this.prisma.role.findUnique({
-      where: { name: role },
-    });
+    const roleRecord = await this.usersRepo.findRoleByName(role);
 
     if (!roleRecord) {
       throw new NotFoundException('Role not found');
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { role_id: roleRecord.id },
-      select: this.selectUser,
+    const user = await this.usersRepo.updateById(id, {
+      role_id: roleRecord.id,
     });
 
     return {
@@ -237,19 +207,16 @@ export class UsersService {
   }
 
   async updatePassword(id: string, hashedPassword: string) {
-    await this.prisma.user.update({
-      where: { id },
-      data: { password: hashedPassword },
-    });
+    await this.findById(id); // throws if not found
+
+    await this.usersRepo.updatePassword(id, hashedPassword);
   }
 
   async toggleActive(id: string) {
     const user = await this.findById(id);
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: { is_active: !user.is_active },
-      select: this.selectUser,
+    const updated = await this.usersRepo.updateById(id, {
+      is_active: !user.is_active,
     });
 
     return {
@@ -261,7 +228,7 @@ export class UsersService {
   async remove(id: string) {
     await this.findById(id); // throws if not found
 
-    await this.prisma.user.delete({ where: { id } });
+    await this.usersRepo.softDelete(id);
 
     return {
       message: 'User deleted successfully',

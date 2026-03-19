@@ -74,9 +74,6 @@ export class AuthService {
           email: user.email,
           role: user.role.name,
           hospital_id: user.hospital_id ?? undefined,
-          permissions: user.role.role_permissions.map(
-            (rp) => rp.permission.name,
-          ),
         },
         ...tokens,
       },
@@ -98,8 +95,17 @@ export class AuthService {
     };
   }
 
-  async getProfile(userId: string) {
-    return this.usersService.findOne(userId);
+  async getMe(userId: string) {
+    const user = await this.usersService.getMe(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      message: 'User profile retrieved successfully',
+      data: user,
+    };
   }
 
   async updatePassword(userId: string, dto: UpdatePasswordDto) {
