@@ -4,10 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import {
-  CreateAppointmentDto,
-  AppointmentType,
-} from './dto/create-appointment.dto';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { QueryAppointmentDto } from './dto/query-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
@@ -21,17 +18,6 @@ export class AppointmentsService {
     const dateTimeStr = `${date}T${time}:00`;
     const appointmentDateTime = new Date(dateTimeStr);
     return appointmentDateTime > new Date();
-  }
-
-  private async getUserIdFromDonation(donationId: string): Promise<string> {
-    const donation = await this.database.donation.findUnique({
-      where: { id: donationId },
-      include: { donor: true },
-    });
-    if (!donation) {
-      throw new NotFoundException(`Donation with id ${donationId} not found`);
-    }
-    return donation.donor.user_id;
   }
 
   private async getUserIdFromBloodRequest(requestId: string): Promise<string> {
@@ -95,27 +81,9 @@ export class AppointmentsService {
   }
 
   async create(userId: string, dto: CreateAppointmentDto) {
-    if (dto.type === AppointmentType.DONATION && !dto.donation_id) {
-      throw new BadRequestException(
-        'donation_id is required when type is donation',
-      );
-    }
-
-    if (dto.type === AppointmentType.REQUEST && !dto.blood_request_id) {
-      throw new BadRequestException(
-        'blood_request_id is required when type is request',
-      );
-    }
-
-    let userIdFromRecord = userId;
-
-    if (dto.type === AppointmentType.DONATION && dto.donation_id) {
-      userIdFromRecord = await this.getUserIdFromDonation(dto.donation_id);
-    } else if (dto.type === AppointmentType.REQUEST && dto.blood_request_id) {
-      userIdFromRecord = await this.getUserIdFromBloodRequest(
-        dto.blood_request_id,
-      );
-    }
+    const userIdFromRecord = await this.getUserIdFromBloodRequest(
+      dto.blood_request_id,
+    );
 
     if (
       !this.validateFutureDateTime(dto.appointment_date, dto.appointment_time)
@@ -125,16 +93,13 @@ export class AppointmentsService {
       );
     }
 
-    if (dto.type === AppointmentType.REQUEST && dto.blood_request_id) {
-      await this.handleBloodInventory(dto.blood_request_id);
-      await this.updateBloodRequestStatus(dto.blood_request_id);
-    }
+    await this.handleBloodInventory(dto.blood_request_id);
+    await this.updateBloodRequestStatus(dto.blood_request_id);
 
     const appointment = await this.database.appointment.create({
       data: {
         user_id: userIdFromRecord,
         hospital_id: dto.hospital_id,
-        donation_id: dto.donation_id,
         blood_request_id: dto.blood_request_id,
         appointment_date: new Date(dto.appointment_date),
         appointment_time: new Date(

@@ -5,26 +5,12 @@ import {
   IsString,
   IsOptional,
   Matches,
-  IsEnum,
 } from 'class-validator';
-
-export enum AppointmentType {
-  DONATION = 'donation',
-  REQUEST = 'request',
-}
 
 export class CreateAppointmentDto {
   @IsNotEmpty()
-  @IsEnum(AppointmentType)
-  type: AppointmentType;
-
-  @IsOptional()
   @IsUUID()
-  donation_id?: string;
-
-  @IsOptional()
-  @IsUUID()
-  blood_request_id?: string;
+  blood_request_id: string;
 
   @IsNotEmpty()
   @IsUUID()
