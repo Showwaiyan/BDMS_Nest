@@ -11,6 +11,7 @@ import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 import { Prisma, RequestStatus } from 'prisma/generated/client';
 import type { RequestedUser } from '../common/interfaces/requested-user.interface';
 import { generateRequestCode } from 'src/common/helpers/request-code.helper';
+import { RequestFindOptions } from './interfaces/request-find-options.interface';
 
 @Injectable()
 export class RequestsService {
@@ -248,13 +249,7 @@ export class RequestsService {
 
   private async findRequestOrThrow(
     id: string,
-    options: {
-      userId?: string;
-      hospitalId?: string;
-      expectedStatus?: RequestStatus;
-      notFoundMessage?: string;
-      statusErrorMessage?: string;
-    } = {},
+    options: RequestFindOptions = {},
   ) {
     // find request by id without select
     const existingRequest = await this.requestsRepo.findByIdWithoutSelect(id);
