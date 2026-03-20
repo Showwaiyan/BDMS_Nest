@@ -37,6 +37,7 @@ describe('RequestsController', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RequestsController],
       providers: [
@@ -110,6 +111,30 @@ describe('RequestsController', () => {
         message: 'Success',
         data: [],
       });
+    });
+  });
+
+  describe('findOne', () => {
+    it('should throw ForbiddenException if user has no hospital_id', () => {
+      const userWithoutHospital = { ...mockUser, hospital_id: undefined };
+      expect(() => controller.findOne('req-1', userWithoutHospital)).toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should call service.findOne with id, user_id, hospital_id and role', async () => {
+      mockRequestsService.findOne.mockResolvedValue({
+        message: 'Success',
+        data: { id: 'req-1' },
+      });
+      const result = await controller.findOne('req-1', mockUser);
+      expect(result.message).toBe('Success');
+      expect(service.findOne).toHaveBeenCalledWith(
+        'req-1',
+        mockUser.id,
+        mockUser.hospital_id,
+        mockUser.role,
+      );
     });
   });
 

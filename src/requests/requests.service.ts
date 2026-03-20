@@ -104,8 +104,13 @@ export class RequestsService {
     };
   }
 
-  async findOne(id: string, hospitalId?: string) {
-    await this.findRequestOrThrow(id, { hospitalId });
+  async findOne(id: string, userId: string, hospitalId: string, role: string) {
+    const isAdminOrStaff = ['ADMIN', 'STAFF'].includes(role); // ADMIN and STAFF can view all requests.
+
+    await this.findRequestOrThrow(id, {
+      hospitalId,
+      userId: isAdminOrStaff ? undefined : userId,
+    });
 
     const request = await this.requestsRepo.findById(id);
     return {
@@ -253,7 +258,6 @@ export class RequestsService {
   ) {
     // find request by id without select
     const existingRequest = await this.requestsRepo.findByIdWithoutSelect(id);
-
     // check if request exists and user has access
     if (
       !existingRequest ||
