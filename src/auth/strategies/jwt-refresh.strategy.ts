@@ -1,8 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { AppConfigService } from '../../config/config.helper';
 import { DatabaseService } from '../../database/database.service';
+import { TokenBlacklistService } from '../token-blacklist.service';
 import { RequestedUser } from 'src/common/interfaces/requested-user.interface';
 
 @Injectable()
@@ -13,20 +15,35 @@ export class JwtRefreshStrategy extends PassportStrategy(
   constructor(
     private appConfig: AppConfigService,
     private databaseService: DatabaseService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: appConfig.jwtRefreshSecret,
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: {
-    sub: string;
-    user_name: string;
-    iat: number;
-    exp: number;
-  }): Promise<RequestedUser> {
+  async validate(
+    req: Request,
+    payload: {
+      sub: string;
+      user_name: string;
+      iat: number;
+      exp: number;
+    },
+  ): Promise<RequestedUser> {
+    // Extract and check if refresh token is blacklisted
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const isBlacklisted =
+        await this.tokenBlacklistService.isBlacklisted(token);
+      if (isBlacklisted) {
+        throw new UnauthorizedException('Refresh token has been revoked');
+      }
+    }
     const user = await this.databaseService.user.findFirst({
       where: {
         id: payload.sub,

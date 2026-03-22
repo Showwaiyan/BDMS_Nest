@@ -145,4 +145,84 @@ export class UsersRepository {
       select: this.selectIdOnly,
     });
   }
+
+  async getStatsSummary(hospitalId: string) {
+    const total = await this.prisma.user.count({
+      where: { deleted_at: null, hospital_id: hospitalId },
+    });
+
+    const byRole = await this.prisma.user.groupBy({
+      by: ['role_id'],
+      where: { deleted_at: null, hospital_id: hospitalId },
+      _count: true,
+    });
+
+    const byStatus = await this.prisma.user.groupBy({
+      by: ['is_active'],
+      where: { deleted_at: null, hospital_id: hospitalId },
+      _count: true,
+    });
+
+    // Map role IDs to role names
+    const roleStats: Record<string, number> = {};
+    for (const stat of byRole) {
+      const role = await this.prisma.role.findUnique({
+        where: { id: stat.role_id },
+      });
+      if (role) {
+        roleStats[role.name] = stat._count;
+      }
+    }
+
+    const statusStats = {
+      active: byStatus.find((s) => s.is_active)?._count || 0,
+      inactive: byStatus.find((s) => !s.is_active)?._count || 0,
+    };
+
+    return {
+      total,
+      by_role: roleStats,
+      by_status: statusStats,
+    };
+  }
+
+  async getStatsByRole(hospitalId: string) {
+    const stats = await this.prisma.user.groupBy({
+      by: ['role_id'],
+      where: { deleted_at: null, hospital_id: hospitalId },
+      _count: true,
+    });
+
+    const result: Record<
+      string,
+      { count: number; active: number; inactive: number }
+    > = {};
+
+    for (const stat of stats) {
+      const role = await this.prisma.role.findUnique({
+        where: { id: stat.role_id },
+      });
+
+      if (role) {
+        const activeCount = await this.prisma.user.count({
+          where: {
+            role_id: stat.role_id,
+            is_active: true,
+            deleted_at: null,
+            hospital_id: hospitalId,
+          },
+        });
+
+        const inactiveCount = stat._count - activeCount;
+
+        result[role.name] = {
+          count: stat._count,
+          active: activeCount,
+          inactive: inactiveCount,
+        };
+      }
+    }
+
+    return result;
+  }
 }

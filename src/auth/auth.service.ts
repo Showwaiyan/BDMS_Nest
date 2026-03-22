@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
 import { AppConfigService } from '../config/config.helper';
+import { TokenBlacklistService } from './token-blacklist.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
@@ -18,6 +19,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private appConfig: AppConfigService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -136,6 +138,31 @@ export class AuthService {
 
     return {
       message: 'Password updated successfully',
+    };
+  }
+
+  async logout(
+    accessToken: string,
+    accessTokenExpiry: number,
+    refreshToken?: string,
+  ) {
+    // Blacklist access token
+    await this.tokenBlacklistService.blacklist(accessToken, accessTokenExpiry);
+
+    // Blacklist refresh token if provided
+    if (refreshToken) {
+      try {
+        const decoded: any = this.jwtService.decode(refreshToken);
+        if (decoded && decoded.exp) {
+          await this.tokenBlacklistService.blacklist(refreshToken, decoded.exp);
+        }
+      } catch (error) {
+        // If refresh token decode fails, still proceed with access token blacklist
+      }
+    }
+
+    return {
+      message: 'Logged out successfully',
     };
   }
 

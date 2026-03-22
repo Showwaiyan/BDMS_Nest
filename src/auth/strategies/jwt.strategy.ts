@@ -1,29 +1,46 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { DatabaseService } from '../../database/database.service';
 import { AppConfigService } from '../../config/config.helper';
 import { RequestedUser } from 'src/common/interfaces/requested-user.interface';
+import { TokenBlacklistService } from '../token-blacklist.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private databaseService: DatabaseService,
     private appConfig: AppConfigService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: appConfig.jwtSecret,
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: {
-    sub: string;
-    user_name: string;
-    role: string;
-    hospital_id?: string;
-  }): Promise<RequestedUser> {
+  async validate(
+    req: Request,
+    payload: {
+      sub: string;
+      user_name: string;
+      role: string;
+      hospital_id?: string;
+      iat: number;
+      exp: number;
+    },
+  ): Promise<RequestedUser> {
+    // Extract token from Authorization header
+    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+
+    // Check if token is blacklisted
+    if (token && (await this.tokenBlacklistService.isBlacklisted(token))) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
     const user = await this.databaseService.user.findFirst({
       where: {
         id: payload.sub,

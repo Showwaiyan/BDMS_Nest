@@ -40,4 +40,9 @@ export class AppConfigService {
     return (this.configService.get<string>('jwt.refreshExpiresIn') ||
       '30d') as StringValue;
   }
+
+  // Redis
+  get redisUrl(): string | undefined {
+    return this.configService.get<string>('redis.url');
+  }
 }

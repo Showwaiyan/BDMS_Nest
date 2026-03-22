@@ -49,6 +49,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.18.0",
+    "redis": "^5.11.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -109,7 +110,9 @@
     },
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/$1",
-      "^(\\.{1,2}/.*)\\.js$": "$1"
+      "^prisma/generated/(.*)\\.js$": "<rootDir>/../prisma/generated/$1",
+      "^prisma/generated/client$": "<rootDir>/../prisma/generated/client",
+      "^(\\.\\.?/.*)\\.js$": "$1"
     },
     "testPathIgnorePatterns": [
       "node_modules",
@@ -119,12 +122,6 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1",
-      "^prisma/generated/(.*)\\.js$": "<rootDir>/../prisma/generated/$1",
-      "^prisma/generated/client$": "<rootDir>/../prisma/generated/client",
-      "^(\\.\\.?/.*)\\.js$": "$1"
-    },
     "testEnvironment": "node"
   },
   "packageManager": "pnpm@10.29.2+sha512.bef43fa759d91fd2da4b319a5a0d13ef7a45bb985a3d7342058470f9d2051a3ba8674e629672654686ef9443ad13a82da2beb9eeb3e0221c87b8154fff9d74b8",

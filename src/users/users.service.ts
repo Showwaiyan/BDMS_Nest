@@ -64,7 +64,7 @@ export class UsersService {
     });
   }
 
-  // admin: find all STAFF users in their hospital
+  // always scoped to a hospital
   async findStaffByHospital(hospitalId: string, dto: PaginationDto) {
     const { page, limit, search } = dto;
     const { skip, take } = paginate(page, limit);
@@ -92,7 +92,7 @@ export class UsersService {
     };
   }
 
-  // used by controller - always scoped to a hospital
+  // always scoped to a hospital
   async findAllPatients(dto: PaginationDto, hospitalId: string) {
     const { page, limit, search } = dto;
     const { skip, take } = paginate(page, limit);
@@ -233,6 +233,24 @@ export class UsersService {
     return {
       message: 'User deleted successfully',
       data: null,
+    };
+  }
+
+  async getStatsSummary(hospitalId: string) {
+    const stats = await this.usersRepo.getStatsSummary(hospitalId);
+
+    return {
+      message: 'User statistics fetched successfully',
+      data: stats,
+    };
+  }
+
+  async getStatsByRole(hospitalId: string) {
+    const stats = await this.usersRepo.getStatsByRole(hospitalId);
+
+    return {
+      message: 'Statistics by role fetched successfully',
+      data: stats,
     };
   }
 }

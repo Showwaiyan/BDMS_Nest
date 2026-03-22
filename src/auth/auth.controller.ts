@@ -1,39 +1,149 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiExtraModels,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import type { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { ApiResponseDto } from '../common/dto/api-response.dto';
+import {
+  AuthUserLoginResponseDataDto,
+  AuthRegisterResponseDataDto,
+  AuthTokenResponseDataDto,
+  AuthUserProfileResponseDataDto,
+  MessageResponseDto,
+} from './dto/auth-responses.dto';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
 
+@ApiTags('auth')
+@ApiExtraModels(
+  ApiResponseDto,
+  AuthUserLoginResponseDataDto,
+  AuthRegisterResponseDataDto,
+  AuthTokenResponseDataDto,
+  AuthUserProfileResponseDataDto,
+  MessageResponseDto,
+)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 201 },
+        message: { example: 'User registered successfully' },
+        data: { $ref: getSchemaPath(AuthRegisterResponseDataDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request or validation failed' })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Login successful' },
+        data: { $ref: getSchemaPath(AuthUserLoginResponseDataDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Token refreshed successfully' },
+        data: { $ref: getSchemaPath(AuthTokenResponseDataDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or revoked refresh token' })
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   refresh(@CurrentUser() user: requestedUserInterface.RequestedUser) {
     return this.authService.refreshToken(user.id);
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Request successful' },
+        data: { $ref: getSchemaPath(AuthUserProfileResponseDataDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getProfile(@CurrentUser() user: requestedUserInterface.RequestedUser) {
     return this.authService.getMe(user.id);
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password updated successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Password updated successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized or invalid password' })
+  @ApiResponse({ status: 400, description: 'Bad request or validation failed' })
   @UseGuards(JwtAuthGuard)
   @Post('update-password')
   updatePassword(
@@ -41,5 +151,39 @@ export class AuthController {
     @Body() dto: UpdatePasswordDto,
   ) {
     return this.authService.updatePassword(user.id, dto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout and revoke tokens' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Logged out successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: Request, @Body() dto: LogoutDto) {
+    // JwtAuthGuard already validated the token, so it's guaranteed to exist
+    const accessToken = req.headers.authorization!.substring(7); // Remove "Bearer " prefix
+
+    const decoded: any = this.jwtService.decode(accessToken);
+    if (decoded?.exp) {
+      return await this.authService.logout(
+        accessToken,
+        decoded.exp,
+        dto.refreshToken,
+      );
+    }
+
+    return { message: 'Logged out successfully' };
   }
 }
