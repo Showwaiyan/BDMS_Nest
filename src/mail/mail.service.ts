@@ -11,15 +11,15 @@ export class MailService {
     if (this.appConfig.resendApiKey) {
       this.resend = new Resend(this.appConfig.resendApiKey);
     } else {
-      this.logger.warn(
-        'RESEND_API_KEY is not set. Emails will not be sent.',
-      );
+      this.logger.warn('RESEND_API_KEY is not set. Emails will not be sent.');
     }
   }
 
   private getToEmail(originalEmail: string): string {
     const isProd = this.appConfig.nodeEnv === 'production';
-    return isProd ? originalEmail : (this.appConfig.resendToEmail || originalEmail);
+    return isProd
+      ? originalEmail
+      : this.appConfig.resendToEmail || originalEmail;
   }
 
   async sendWelcomeEmail(email: string, name: string) {
@@ -43,7 +43,11 @@ export class MailService {
     }
   }
 
-  async sendVerificationEmail(email: string, name: string, verificationLink: string) {
+  async sendVerificationEmail(
+    email: string,
+    name: string,
+    verificationLink: string,
+  ) {
     if (!this.resend) return;
     const toEmail = this.getToEmail(email);
 
@@ -61,7 +65,10 @@ export class MailService {
       });
       this.logger.log(`Verification email sent to ${toEmail}`);
     } catch (error) {
-      this.logger.error(`Failed to send verification email to ${toEmail}`, error);
+      this.logger.error(
+        `Failed to send verification email to ${toEmail}`,
+        error,
+      );
     }
   }
 
@@ -83,7 +90,10 @@ export class MailService {
       });
       this.logger.log(`Password reset email sent to ${toEmail}`);
     } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${toEmail}`, error);
+      this.logger.error(
+        `Failed to send password reset email to ${toEmail}`,
+        error,
+      );
     }
   }
 }

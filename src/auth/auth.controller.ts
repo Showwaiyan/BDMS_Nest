@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, UseGuards, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -165,7 +173,9 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @ApiOperation({ summary: 'Initiate Google OAuth login (must provide hospital_id in query)' })
+  @ApiOperation({
+    summary: 'Initiate Google OAuth login (must provide hospital_id in query)',
+  })
   @UseGuards(GoogleOauthGuard)
   @Get('google')
   googleAuth(@Query('hospital_id') hospital_id: string) {
