@@ -216,6 +216,10 @@ export class UsersService {
     };
   }
 
+  async updateById(id: string, data: Prisma.UserUncheckedUpdateInput) {
+    return this.usersRepo.updateById(id, data);
+  }
+
   async updateUserRole(id: string, role: 'USER' | 'STAFF' | 'ADMIN') {
     await this.findById(id); // throws if not found
     const roleRecord = await this.usersRepo.findRoleByName(role);

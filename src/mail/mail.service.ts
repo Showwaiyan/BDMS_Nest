@@ -37,6 +37,27 @@ export class MailService {
     }
   }
 
+  async sendVerificationEmail(email: string, name: string, verificationLink: string) {
+    if (!this.resend) return;
+
+    try {
+      await this.resend.emails.send({
+        from: this.appConfig.resendFromEmail,
+        to: email,
+        subject: 'Verify Your Email - Blood Donation Management System',
+        html: `
+          <h1>Hello, ${name}</h1>
+          <p>Thank you for registering! Please click the link below to verify your email address:</p>
+          <a href="${verificationLink}" style="padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a>
+          <p>This link will expire in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
+        `,
+      });
+      this.logger.log(`Verification email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send verification email to ${email}`, error);
+    }
+  }
+
   async sendPasswordResetEmail(email: string, name: string, resetLink: string) {
     if (!this.resend) return;
 

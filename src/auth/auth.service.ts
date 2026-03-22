@@ -21,6 +21,7 @@ import * as crypto from 'crypto';
 @Injectable()
 export class AuthService {
   private readonly RESET_PASSWORD_PREFIX = 'reset-password:';
+  private readonly VERIFY_EMAIL_PREFIX = 'verify-email:';
 
   constructor(
     private usersService: UsersService,
@@ -45,53 +46,39 @@ export class AuthService {
       role_id: userRole.id,
     });
 
-    // Send welcome email (non-blocking)
-    void this.mailService.sendWelcomeEmail(user.email, user.user_name);
-
-    return {
-      message: 'User registered successfully',
-      data: user,
-    };
-  }
-
-  async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.usersService.findByEmailInternal(dto.email);
-
-    if (!user) {
-      // Return success even if user doesn't exist for security (don't leak users)
-      return {
-        message:
-          'If an account with that email exists, we have sent a password reset link.',
-      };
-    }
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetKey = `${this.RESET_PASSWORD_PREFIX}${resetToken}`;
-
-    // Store in Redis with 1 hour TTL
-    await this.redisService.set(resetKey, user.email, 3600);
-
-    // TODO: Change this to your actual frontend reset link
-    const resetLink = `http://localhost:3001/reset-password?token=${resetToken}`;
-
-    void this.mailService.sendPasswordResetEmail(
-      user.email,
-      user.user_name,
-      resetLink,
-    );
+    // Send verification email
+    await this.sendVerificationLink(user.email, user.user_name);
 
     return {
       message:
-        'If an account with that email exists, we have sent a password reset link.',
+        'Registration successful. Please check your email to verify your account.',
+      data: {
+        id: user.id,
+        user_name: user.user_name,
+        email: user.email,
+      },
     };
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
-    const resetKey = `${this.RESET_PASSWORD_PREFIX}${dto.token}`;
-    const email = await this.redisService.get(resetKey);
+  private async sendVerificationLink(email: string, userName: string) {
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verifyKey = `${this.VERIFY_EMAIL_PREFIX}${verificationToken}`;
+
+    // Store in Redis with 24 hours TTL
+    await this.redisService.set(verifyKey, email, 86400);
+
+    // TODO: Link to frontend verification page
+    const verifyLink = `http://localhost:3001/verify-email?token=${verificationToken}`;
+
+    void this.mailService.sendVerificationEmail(email, userName, verifyLink);
+  }
+
+  async verifyEmail(token: string) {
+    const verifyKey = `${this.VERIFY_EMAIL_PREFIX}${token}`;
+    const email = await this.redisService.get(verifyKey);
 
     if (!email) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException('Invalid or expired verification token');
     }
 
     const user = await this.usersService.findByEmailInternal(email);
@@ -99,14 +86,43 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
-    await this.usersService.updatePassword(user.id, hashedPassword);
+    if (user.email_verified_at) {
+      return { message: 'Email already verified' };
+    }
 
-    // Delete the token
-    await this.redisService.del(resetKey);
+    await this.usersService.updateById(user.id, {
+      email_verified_at: new Date(),
+    });
+
+    // Delete token after successful verification
+    await this.redisService.del(verifyKey);
+
+    // Send welcome email after verification
+    void this.mailService.sendWelcomeEmail(user.email, user.user_name);
 
     return {
-      message: 'Password has been reset successfully',
+      message: 'Email verified successfully',
+    };
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.usersService.findByEmailInternal(email);
+
+    if (!user) {
+      // Return success even if user doesn't exist for security
+      return {
+        message: 'If the account exists, a new verification link has been sent.',
+      };
+    }
+
+    if (user.email_verified_at) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    await this.sendVerificationLink(user.email, user.user_name);
+
+    return {
+      message: 'If the account exists, a new verification link has been sent.',
     };
   }
 
@@ -119,6 +135,12 @@ export class AuthService {
 
     if (!user.is_active) {
       throw new UnauthorizedException('Account is deactivated');
+    }
+
+    if (!user.email_verified_at) {
+      throw new UnauthorizedException(
+        'Email not verified. Please check your inbox.',
+      );
     }
 
     if (!user.password) {
@@ -212,6 +234,17 @@ export class AuthService {
 
         user = await this.usersService.findById(createdUserResult.id);
       }
+
+      // Automatically verify OAuth users if not already verified
+      if (user && !user.email_verified_at) {
+        user = await this.usersService.updateById(user.id, {
+          email_verified_at: new Date(),
+        });
+      }
+    }
+
+    if (!user) {
+      throw new InternalServerErrorException('Failed to process OAuth login');
     }
 
     if (!user.is_active) {
@@ -237,6 +270,58 @@ export class AuthService {
         },
         ...tokens,
       },
+    };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.usersService.findByEmailInternal(dto.email);
+
+    if (!user) {
+      return {
+        message:
+          'If an account with that email exists, we have sent a password reset link.',
+      };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetKey = `${this.RESET_PASSWORD_PREFIX}${resetToken}`;
+
+    await this.redisService.set(resetKey, user.email, 3600);
+
+    const resetLink = `http://localhost:3001/reset-password?token=${resetToken}`;
+
+    void this.mailService.sendPasswordResetEmail(
+      user.email,
+      user.user_name,
+      resetLink,
+    );
+
+    return {
+      message:
+        'If an account with that email exists, we have sent a password reset link.',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const resetKey = `${this.RESET_PASSWORD_PREFIX}${dto.token}`;
+    const email = await this.redisService.get(resetKey);
+
+    if (!email) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const user = await this.usersService.findByEmailInternal(email);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    await this.redisService.del(resetKey);
+
+    return {
+      message: 'Password has been reset successfully',
     };
   }
 
@@ -295,10 +380,8 @@ export class AuthService {
     accessTokenExpiry: number,
     refreshToken?: string,
   ) {
-    // Blacklist access token
     await this.tokenBlacklistService.blacklist(accessToken, accessTokenExpiry);
 
-    // Blacklist refresh token if provided
     if (refreshToken) {
       try {
         const decoded = this.jwtService.decode<{ exp?: number }>(refreshToken);
@@ -306,7 +389,7 @@ export class AuthService {
           await this.tokenBlacklistService.blacklist(refreshToken, decoded.exp);
         }
       } catch {
-        // If refresh token decode fails, still proceed with access token blacklist
+        // Ignore
       }
     }
 

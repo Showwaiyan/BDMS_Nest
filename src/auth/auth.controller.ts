@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +20,7 @@ import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import {
   AuthUserLoginResponseDataDto,
@@ -64,6 +65,45 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @ApiOperation({ summary: 'Verify user email using a token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Email verified successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  @Get('verify-email')
+  verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @ApiOperation({ summary: 'Resend email verification link' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification link sent if account exists',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Verification link sent successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @Post('resend-verification')
+  resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto.email);
   }
 
   @ApiOperation({ summary: 'Request a password reset email' })
