@@ -103,7 +103,7 @@ export class AuthController {
   })
   @Post('resend-verification')
   resendVerification(@Body() dto: ResendVerificationDto) {
-    return this.authService.resendVerification(dto.email);
+    return this.authService.resendVerification(dto.email, dto.hospital_id);
   }
 
   @ApiOperation({ summary: 'Request a password reset email' })
@@ -165,10 +165,10 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @ApiOperation({ summary: 'Initiate Google OAuth login (must provide hospital_id in query)' })
   @UseGuards(GoogleOauthGuard)
   @Get('google')
-  googleAuth() {
+  googleAuth(@Query('hospital_id') hospital_id: string) {
     // Initiates the Google OAuth flow
   }
 
@@ -181,8 +181,9 @@ export class AuthController {
       providerId: string;
       email: string;
       provider: string;
+      hospital_id: string; // Extracted from state by strategy
     };
-    return this.authService.validateOAuthLogin(user);
+    return this.authService.validateOAuthLogin(user, user.hospital_id);
   }
 
   @ApiBearerAuth('access-token')

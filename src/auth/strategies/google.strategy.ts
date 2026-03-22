@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { AppConfigService } from '../../config/config.helper';
@@ -11,22 +11,40 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret: appConfig.googleClientSecret || 'none',
       callbackURL: appConfig.googleCallbackUrl || 'none',
       scope: ['email', 'profile'],
+      passReqToCallback: true,
     });
   }
 
   async validate(
+    req: any,
     accessToken: string,
     refreshToken: string,
     profile: import('passport-google-oauth20').Profile,
     done: VerifyCallback,
   ) {
-    const { name, emails, id } = profile;
+    const { emails, id } = profile;
+    const { state } = req.query;
+
+    let hospital_id: string | undefined;
+
+    if (state) {
+      try {
+        const parsedState = JSON.parse(state);
+        hospital_id = parsedState.hospital_id;
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    if (!hospital_id) {
+      return done(new BadRequestException('Hospital ID is required in OAuth state'), undefined);
+    }
+
     const user = {
       provider: 'google',
       providerId: id,
       email: emails?.[0]?.value ?? '',
-      firstName: name?.givenName ?? '',
-      lastName: name?.familyName ?? '',
+      hospital_id,
     };
     done(null, user);
   }

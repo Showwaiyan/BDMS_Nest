@@ -20,16 +20,16 @@ export class UsersService {
     return this.usersRepo.findRoleByName(name);
   }
 
-  async findByUsername(user_name: string) {
-    return this.usersRepo.findByUsername(user_name);
+  async findByUsername(user_name: string, hospital_id: string) {
+    return this.usersRepo.findByUsername(user_name, hospital_id);
   }
 
-  async findByProviderId(provider_id: string) {
-    return this.usersRepo.findByProviderId(provider_id);
+  async findByProviderId(provider_id: string, hospital_id: string) {
+    return this.usersRepo.findByProviderId(provider_id, hospital_id);
   }
 
-  async findByEmailInternal(email: string) {
-    return this.usersRepo.findByEmailInternal(email);
+  async findByEmailInternal(email: string, hospital_id: string) {
+    return this.usersRepo.findByEmailInternal(email, hospital_id);
   }
 
   async linkProvider(id: string, provider: string, provider_id: string) {
@@ -42,6 +42,7 @@ export class UsersService {
     provider: string;
     provider_id: string;
     role_id: string;
+    hospital_id: string;
   }) {
     return this.usersRepo.create({
       email: data.email,
@@ -49,6 +50,7 @@ export class UsersService {
       provider: data.provider,
       provider_id: data.provider_id,
       role_id: data.role_id,
+      hospital_id: data.hospital_id,
     });
   }
 
@@ -64,22 +66,28 @@ export class UsersService {
 
   // internal use only - no response formatting or error handling here
   // for reducing db payload size
-  async checkExistsByUsername(user_name: string) {
-    return this.usersRepo.checkExistsByUsername(user_name);
+  async checkExistsByUsername(user_name: string, hospital_id: string) {
+    return this.usersRepo.checkExistsByUsername(user_name, hospital_id);
   }
 
-  async checkExistsByEmail(email: string) {
-    return this.usersRepo.checkExistsByEmail(email);
+  async checkExistsByEmail(email: string, hospital_id: string) {
+    return this.usersRepo.checkExistsByEmail(email, hospital_id);
   }
 
   async create(dto: CreateUserDto) {
-    const existing = await this.checkExistsByUsername(dto.user_name);
+    const existing = await this.checkExistsByUsername(
+      dto.user_name,
+      dto.hospital_id,
+    );
 
     if (existing) {
       throw new ConflictException('Username already taken');
     }
 
-    const existingEmail = await this.checkExistsByEmail(dto.email);
+    const existingEmail = await this.checkExistsByEmail(
+      dto.email,
+      dto.hospital_id,
+    );
     if (existingEmail) {
       throw new ConflictException('Email already taken');
     }
@@ -184,6 +192,7 @@ export class UsersService {
     if (dto.user_name && dto.user_name !== user.user_name) {
       const existing = await this.usersRepo.checkExistsByUsername(
         dto.user_name,
+        user.hospital_id,
         id,
       );
       if (existing) {
@@ -192,7 +201,11 @@ export class UsersService {
     }
 
     if (dto.email && dto.email !== user.email) {
-      const existing = await this.usersRepo.checkExistsByEmail(dto.email, id);
+      const existing = await this.usersRepo.checkExistsByEmail(
+        dto.email,
+        user.hospital_id,
+        id,
+      );
       if (existing) {
         throw new ConflictException('Email already taken');
       }

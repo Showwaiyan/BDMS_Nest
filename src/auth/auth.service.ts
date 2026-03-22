@@ -44,10 +44,11 @@ export class AuthService {
     const user = await this.usersService.create({
       ...dto,
       role_id: userRole.id,
+      hospital_id: dto.hospital_id,
     });
 
     // Send verification email
-    await this.sendVerificationLink(user.email, user.user_name);
+    await this.sendVerificationLink(user.email, user.user_name, user.hospital_id);
 
     return {
       message:
@@ -56,16 +57,21 @@ export class AuthService {
         id: user.id,
         user_name: user.user_name,
         email: user.email,
+        hospital_id: user.hospital_id,
       },
     };
   }
 
-  private async sendVerificationLink(email: string, userName: string) {
+  private async sendVerificationLink(
+    email: string,
+    userName: string,
+    hospital_id: string,
+  ) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verifyKey = `${this.VERIFY_EMAIL_PREFIX}${verificationToken}`;
 
-    // Store in Redis with 24 hours TTL
-    await this.redisService.set(verifyKey, email, 86400);
+    // Store email:hospital_id in Redis with 24 hours TTL
+    await this.redisService.set(verifyKey, `${email}:${hospital_id}`, 86400);
 
     // TODO: Link to frontend verification page
     const verifyLink = `http://localhost:3001/verify-email?token=${verificationToken}`;
@@ -75,13 +81,15 @@ export class AuthService {
 
   async verifyEmail(token: string) {
     const verifyKey = `${this.VERIFY_EMAIL_PREFIX}${token}`;
-    const email = await this.redisService.get(verifyKey);
+    const value = await this.redisService.get(verifyKey);
 
-    if (!email) {
+    if (!value) {
       throw new BadRequestException('Invalid or expired verification token');
     }
 
-    const user = await this.usersService.findByEmailInternal(email);
+    const [email, hospital_id] = value.split(':');
+
+    const user = await this.usersService.findByEmailInternal(email, hospital_id);
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -105,8 +113,8 @@ export class AuthService {
     };
   }
 
-  async resendVerification(email: string) {
-    const user = await this.usersService.findByEmailInternal(email);
+  async resendVerification(email: string, hospital_id: string) {
+    const user = await this.usersService.findByEmailInternal(email, hospital_id);
 
     if (!user) {
       // Return success even if user doesn't exist for security
@@ -119,7 +127,7 @@ export class AuthService {
       throw new BadRequestException('Email is already verified');
     }
 
-    await this.sendVerificationLink(user.email, user.user_name);
+    await this.sendVerificationLink(user.email, user.user_name, hospital_id);
 
     return {
       message: 'If the account exists, a new verification link has been sent.',
@@ -127,7 +135,10 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByUsername(dto.user_name);
+    const user = await this.usersService.findByUsername(
+      dto.user_name,
+      dto.hospital_id,
+    );
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -159,7 +170,7 @@ export class AuthService {
       user.id,
       user.user_name,
       user.role.name,
-      user.hospital_id ?? undefined,
+      user.hospital_id,
     );
 
     // TODO: May Be: set refresh token in httpOnly cookie instead of returning in response body
@@ -171,7 +182,7 @@ export class AuthService {
           user_name: user.user_name,
           email: user.email,
           role: user.role.name,
-          hospital_id: user.hospital_id ?? undefined,
+          hospital_id: user.hospital_id,
         },
         ...tokens,
       },
@@ -194,25 +205,34 @@ export class AuthService {
     };
   }
 
-  async validateOAuthLogin(profile: {
-    providerId: string;
-    email: string;
-    provider: string;
-  }) {
-    let user = await this.usersService.findByProviderId(profile.providerId);
+  async validateOAuthLogin(
+    profile: {
+      providerId: string;
+      email: string;
+      provider: string;
+    },
+    hospital_id: string,
+  ) {
+    let user = await this.usersService.findByProviderId(
+      profile.providerId,
+      hospital_id,
+    );
 
     if (!user) {
-      user = await this.usersService.findByEmailInternal(profile.email);
+      user = await this.usersService.findByEmailInternal(
+        profile.email,
+        hospital_id,
+      );
 
       if (user) {
-        // Link OAuth account to existing user by email
+        // Link OAuth account to existing user by email within the SAME hospital
         user = await this.usersService.linkProvider(
           user.id,
           profile.provider,
           profile.providerId,
         );
       } else {
-        // Create completely new user
+        // Create completely new user for THIS hospital
         const userRole = await this.usersService.findRoleByName('USER');
         if (!userRole) {
           throw new InternalServerErrorException(
@@ -230,6 +250,7 @@ export class AuthService {
           provider: profile.provider,
           provider_id: profile.providerId,
           role_id: userRole.id,
+          hospital_id,
         });
 
         user = await this.usersService.findById(createdUserResult.id);
@@ -255,7 +276,7 @@ export class AuthService {
       user.id,
       user.user_name,
       user.role.name,
-      user.hospital_id ?? undefined,
+      user.hospital_id,
     );
 
     return {
@@ -266,7 +287,7 @@ export class AuthService {
           user_name: user.user_name,
           email: user.email,
           role: user.role.name,
-          hospital_id: user.hospital_id ?? undefined,
+          hospital_id: user.hospital_id,
         },
         ...tokens,
       },
@@ -274,7 +295,10 @@ export class AuthService {
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.usersService.findByEmailInternal(dto.email);
+    const user = await this.usersService.findByEmailInternal(
+      dto.email,
+      dto.hospital_id,
+    );
 
     if (!user) {
       return {
@@ -286,7 +310,8 @@ export class AuthService {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetKey = `${this.RESET_PASSWORD_PREFIX}${resetToken}`;
 
-    await this.redisService.set(resetKey, user.email, 3600);
+    // Store email:hospital_id in Redis with 1 hour TTL
+    await this.redisService.set(resetKey, `${user.email}:${user.hospital_id}`, 3600);
 
     const resetLink = `http://localhost:3001/reset-password?token=${resetToken}`;
 
@@ -304,13 +329,15 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto) {
     const resetKey = `${this.RESET_PASSWORD_PREFIX}${dto.token}`;
-    const email = await this.redisService.get(resetKey);
+    const value = await this.redisService.get(resetKey);
 
-    if (!email) {
+    if (!value) {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const user = await this.usersService.findByEmailInternal(email);
+    const [email, hospital_id] = value.split(':');
+
+    const user = await this.usersService.findByEmailInternal(email, hospital_id);
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -402,7 +429,7 @@ export class AuthService {
     userId: string,
     user_name: string,
     role: string,
-    hospital_id?: string,
+    hospital_id: string,
   ) {
     const payload = { sub: userId, user_name, role, hospital_id };
 

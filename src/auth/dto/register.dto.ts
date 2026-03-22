@@ -35,11 +35,11 @@ export class RegisterDto {
   password: string;
 
   @ApiProperty({
-    description: 'Hospital ID (optional, UUID format)',
+    description: 'Hospital ID (mandatory, UUID format)',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    required: false,
+    required: true,
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsUUID()
-  hospital_id?: string;
+  hospital_id: string;
 }

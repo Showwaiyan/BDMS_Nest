@@ -28,30 +28,33 @@ export class UsersRepository {
     });
   }
 
-  async findByUsername(user_name: string) {
+  async findByUsername(user_name: string, hospital_id: string) {
     return this.prisma.user.findFirst({
       where: {
         user_name,
+        hospital_id,
         deleted_at: null,
       },
       select: this.selectAuthInternal,
     });
   }
 
-  async findByEmailInternal(email: string) {
+  async findByEmailInternal(email: string, hospital_id: string) {
     return this.prisma.user.findFirst({
       where: {
         email,
+        hospital_id,
         deleted_at: null,
       },
       select: this.selectAuthInternal,
     });
   }
 
-  async findByProviderId(provider_id: string) {
+  async findByProviderId(provider_id: string, hospital_id: string) {
     return this.prisma.user.findFirst({
       where: {
         provider_id,
+        hospital_id,
         deleted_at: null,
       },
       select: this.selectAuthInternal,
@@ -96,10 +99,15 @@ export class UsersRepository {
     });
   }
 
-  async checkExistsByUsername(user_name: string, excludeId?: string) {
+  async checkExistsByUsername(
+    user_name: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
     return this.prisma.user.findFirst({
       where: {
         user_name,
+        hospital_id,
         deleted_at: null,
         ...(excludeId && { id: { not: excludeId } }),
       },
@@ -107,10 +115,15 @@ export class UsersRepository {
     });
   }
 
-  async checkExistsByEmail(email: string, excludeId?: string) {
+  async checkExistsByEmail(
+    email: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
     return this.prisma.user.findFirst({
       where: {
         email,
+        hospital_id,
         deleted_at: null,
         ...(excludeId && { id: { not: excludeId } }),
       },
