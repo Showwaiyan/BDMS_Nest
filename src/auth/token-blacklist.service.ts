@@ -1,55 +1,38 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  OnModuleDestroy,
-} from '@nestjs/common';
-import { createClient, RedisClientType } from 'redis';
+import { Injectable, Logger } from '@nestjs/common';
+import { Redis } from '@upstash/redis';
 import { AppConfigService } from '../config/config.helper';
 
 @Injectable()
-export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
-  private redis: RedisClientType | null = null;
-  private isConnected = false;
+export class TokenBlacklistService {
+  private redis: Redis | null = null;
   private readonly logger = new Logger(TokenBlacklistService.name);
   private readonly BLACKLIST_PREFIX = 'blacklist:';
   private readonly BLACKLIST_TTL_BUFFER = 10; // Extra seconds to keep token after exp
 
-  constructor(private appConfig: AppConfigService) {}
-
-  async onModuleInit() {
-    await this.initializeRedis();
+  constructor(private appConfig: AppConfigService) {
+    this.initializeRedis();
   }
 
-  private async initializeRedis(): Promise<void> {
+  private initializeRedis(): void {
     try {
-      const redisUrl = this.appConfig.redisUrl;
+      const redisUrl = this.appConfig.upstashRedisRestUrl;
+      const redisToken = this.appConfig.upstashRedisRestToken;
 
-      if (!redisUrl) {
+      if (!redisUrl || !redisToken) {
         this.logger.warn(
-          'REDIS_URL not configured. Token blacklist will not persist across restarts.',
+          'UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not configured. Token blacklist will not persist.',
         );
         return;
       }
 
-      this.redis = createClient({
+      this.redis = new Redis({
         url: redisUrl,
+        token: redisToken,
       });
 
-      this.redis.on('error', (err) => {
-        this.logger.error('Redis connection error:', err);
-        this.isConnected = false;
-      });
-
-      this.redis.on('connect', () => {
-        this.logger.log('Connected to Redis');
-        this.isConnected = true;
-      });
-
-      await this.redis.connect();
+      this.logger.log('Upstash Redis initialized via REST');
     } catch (error) {
-      this.logger.error('Failed to initialize Redis:', error);
-      this.isConnected = false;
+      this.logger.error('Failed to initialize Upstash Redis REST:', error);
     }
   }
 
@@ -59,8 +42,10 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
    * @param expiresAt Token expiration timestamp (in seconds, from JWT exp claim)
    */
   async blacklist(token: string, expiresAt: number): Promise<void> {
-    if (!this.redis || !this.isConnected) {
-      this.logger.warn('Redis not connected. Token blacklist failed.');
+    if (!this.redis) {
+      this.logger.warn(
+        'Upstash Redis not initialized. Token blacklist failed.',
+      );
       return;
     }
 
@@ -70,7 +55,7 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
 
     // Only set if TTL is positive
     if (ttl > 0) {
-      await this.redis.setEx(key, ttl, 'revoked');
+      await this.redis.setex(key, ttl, 'revoked');
     }
   }
 
@@ -80,10 +65,12 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
    * @returns true if token is blacklisted, false otherwise
    */
   async isBlacklisted(token: string): Promise<boolean> {
-    if (!this.redis || !this.isConnected) {
-      // Fail open: if Redis is down, allow the request
+    if (!this.redis) {
+      // Fail open: if Redis is not configured, allow the request
       // (safer than blocking all requests)
-      this.logger.warn('Redis not connected. Allowing token (fail-open).');
+      this.logger.warn(
+        'Upstash Redis not initialized. Allowing token (fail-open).',
+      );
       return false;
     }
 
@@ -93,7 +80,7 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
       const result = await this.redis.get(key);
       return result !== null;
     } catch (error) {
-      this.logger.error('Error checking blacklist:', error);
+      this.logger.error('Error checking blacklist via Upstash REST:', error);
       // Fail open
       return false;
     }
@@ -102,20 +89,9 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
   /**
    * Get statistics about the blacklist (for monitoring)
    */
-  getStats(): { connected: boolean; redisUrl?: string } {
+  getStats(): { configured: boolean } {
     return {
-      connected: this.isConnected,
-      redisUrl: this.appConfig.redisUrl ? '***' : undefined,
+      configured: this.redis !== null,
     };
-  }
-
-  /**
-   * Clean up Redis connection on module destroy
-   */
-  async onModuleDestroy(): Promise<void> {
-    if (this.redis && this.isConnected) {
-      await this.redis.disconnect();
-      this.logger.log('Disconnected from Redis');
-    }
   }
 }

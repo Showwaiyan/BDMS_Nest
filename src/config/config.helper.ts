@@ -42,7 +42,11 @@ export class AppConfigService {
   }
 
   // Redis
-  get redisUrl(): string | undefined {
-    return this.configService.get<string>('redis.url');
+  get upstashRedisRestUrl(): string | undefined {
+    return this.configService.get<string>('redis.restUrl');
+  }
+
+  get upstashRedisRestToken(): string | undefined {
+    return this.configService.get<string>('redis.restToken');
   }
 }

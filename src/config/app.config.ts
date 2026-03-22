@@ -17,8 +17,9 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('30d'),
 
-  // Redis (Upstash)
-  REDIS_URL: Joi.string().optional(),
+  // Redis (Upstash Serverless)
+  UPSTASH_REDIS_REST_URL: Joi.string().uri().optional(),
+  UPSTASH_REDIS_REST_TOKEN: Joi.string().optional(),
 });
 
 export default () => ({
@@ -37,6 +38,7 @@ export default () => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
   },
   redis: {
-    url: process.env.REDIS_URL,
+    restUrl: process.env.UPSTASH_REDIS_REST_URL,
+    restToken: process.env.UPSTASH_REDIS_REST_TOKEN,
   },
 });
