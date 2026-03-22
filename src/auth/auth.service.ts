@@ -308,8 +308,8 @@ export class AuthService {
 
     if (!user) {
       return {
-        message:
-          'If an account with that email exists, we have sent a password reset link.',
+        message: 'If an account with that email exists, we have sent a password reset link.',
+        data: null,
       };
     }
 
@@ -328,9 +328,9 @@ export class AuthService {
     );
 
     return {
-      message:
-        'If an account with that email exists, we have sent a password reset link.',
-    };
+        message: 'If an account with that email exists, we have sent a password reset link.',
+        data: null,
+      };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -355,6 +355,7 @@ export class AuthService {
 
     return {
       message: 'Password has been reset successfully',
+      data: null,
     };
   }
 
