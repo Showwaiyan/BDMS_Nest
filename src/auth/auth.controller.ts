@@ -175,7 +175,7 @@ export class AuthController {
     // JwtAuthGuard already validated the token, so it's guaranteed to exist
     const accessToken = req.headers.authorization!.substring(7); // Remove "Bearer " prefix
 
-    const decoded: any = this.jwtService.decode(accessToken);
+    const decoded = this.jwtService.decode<{ exp?: number }>(accessToken);
     if (decoded?.exp) {
       return await this.authService.logout(
         accessToken,

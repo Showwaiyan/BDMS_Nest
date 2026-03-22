@@ -1,17 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 import { AppConfigService } from '../config/config.helper';
 
 @Injectable()
-export class TokenBlacklistService {
+export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
   private redis: RedisClientType | null = null;
   private isConnected = false;
   private readonly logger = new Logger(TokenBlacklistService.name);
   private readonly BLACKLIST_PREFIX = 'blacklist:';
   private readonly BLACKLIST_TTL_BUFFER = 10; // Extra seconds to keep token after exp
 
-  constructor(private appConfig: AppConfigService) {
-    this.initializeRedis();
+  constructor(private appConfig: AppConfigService) {}
+
+  async onModuleInit() {
+    await this.initializeRedis();
   }
 
   private async initializeRedis(): Promise<void> {
@@ -95,7 +102,7 @@ export class TokenBlacklistService {
   /**
    * Get statistics about the blacklist (for monitoring)
    */
-  async getStats(): Promise<{ connected: boolean; redisUrl?: string }> {
+  getStats(): { connected: boolean; redisUrl?: string } {
     return {
       connected: this.isConnected,
       redisUrl: this.appConfig.redisUrl ? '***' : undefined,

@@ -152,11 +152,11 @@ export class AuthService {
     // Blacklist refresh token if provided
     if (refreshToken) {
       try {
-        const decoded: any = this.jwtService.decode(refreshToken);
-        if (decoded && decoded.exp) {
+        const decoded = this.jwtService.decode<{ exp?: number }>(refreshToken);
+        if (decoded?.exp) {
           await this.tokenBlacklistService.blacklist(refreshToken, decoded.exp);
         }
-      } catch (error) {
+      } catch {
         // If refresh token decode fails, still proceed with access token blacklist
       }
     }
