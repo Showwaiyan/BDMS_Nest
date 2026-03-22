@@ -53,6 +53,12 @@ export class AuthService {
       throw new UnauthorizedException('Account is deactivated');
     }
 
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'Please sign in using your previously linked OAuth provider.',
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
@@ -89,11 +95,80 @@ export class AuthService {
       user.id,
       user.user_name,
       user.role.name,
+      user.hospital_id ?? undefined,
     );
 
     return {
       message: 'Token refreshed successfully',
       data: tokens,
+    };
+  }
+
+  async validateOAuthLogin(profile: {
+    providerId: string;
+    email: string;
+    provider: string;
+  }) {
+    let user = await this.usersService.findByProviderId(profile.providerId);
+
+    if (!user) {
+      user = await this.usersService.findByEmailInternal(profile.email);
+
+      if (user) {
+        // Link OAuth account to existing user by email
+        user = await this.usersService.linkProvider(
+          user.id,
+          profile.provider,
+          profile.providerId,
+        );
+      } else {
+        // Create completely new user
+        const userRole = await this.usersService.findRoleByName('USER');
+        if (!userRole) {
+          throw new InternalServerErrorException(
+            'Default USER role not found in database. Please contact system administrator.',
+          );
+        }
+
+        const usernamePrefix = profile.email.split('@')[0];
+        const randomString = Math.random().toString(36).substring(2, 6);
+        const autoUsername = `${usernamePrefix}_${randomString}`;
+
+        const createdUserResult = await this.usersService.createOAuthUser({
+          email: profile.email,
+          user_name: autoUsername,
+          provider: profile.provider,
+          provider_id: profile.providerId,
+          role_id: userRole.id,
+        });
+
+        user = await this.usersService.findById(createdUserResult.id);
+      }
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    const tokens = await this.generateTokens(
+      user.id,
+      user.user_name,
+      user.role.name,
+      user.hospital_id ?? undefined,
+    );
+
+    return {
+      message: 'OAuth login successful',
+      data: {
+        user: {
+          id: user.id,
+          user_name: user.user_name,
+          email: user.email,
+          role: user.role.name,
+          hospital_id: user.hospital_id ?? undefined,
+        },
+        ...tokens,
+      },
     };
   }
 
@@ -115,6 +190,12 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.password) {
+      throw new BadRequestException(
+        'You registered via an OAuth provider, please set a password first or continue using OAuth.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(

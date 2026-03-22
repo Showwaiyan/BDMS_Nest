@@ -49,4 +49,17 @@ export class AppConfigService {
   get upstashRedisRestToken(): string | undefined {
     return this.configService.get<string>('redis.restToken');
   }
+
+  // Google OAuth
+  get googleClientId(): string | undefined {
+    return this.configService.get<string>('google.clientId');
+  }
+
+  get googleClientSecret(): string | undefined {
+    return this.configService.get<string>('google.clientSecret');
+  }
+
+  get googleCallbackUrl(): string | undefined {
+    return this.configService.get<string>('google.callbackUrl');
+  }
 }

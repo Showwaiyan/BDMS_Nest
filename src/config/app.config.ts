@@ -20,6 +20,11 @@ export const validationSchema = Joi.object({
   // Redis (Upstash Serverless)
   UPSTASH_REDIS_REST_URL: Joi.string().uri().optional(),
   UPSTASH_REDIS_REST_TOKEN: Joi.string().optional(),
+
+  // Google OAuth
+  GOOGLE_CLIENT_ID: Joi.string().optional(),
+  GOOGLE_CLIENT_SECRET: Joi.string().optional(),
+  GOOGLE_CALLBACK_URL: Joi.string().uri().optional(),
 });
 
 export default () => ({
@@ -40,5 +45,10 @@ export default () => ({
   redis: {
     restUrl: process.env.UPSTASH_REDIS_REST_URL,
     restToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL,
   },
 });

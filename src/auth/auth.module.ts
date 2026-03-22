@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { UsersModule } from '../users/users.module';
 import { AppConfigService } from '../config/config.helper';
@@ -26,6 +27,7 @@ import { AppConfigService } from '../config/config.helper';
     AuthService,
     JwtStrategy,
     JwtRefreshStrategy,
+    GoogleStrategy,
     TokenBlacklistService,
   ],
   exports: [AuthService, JwtModule],

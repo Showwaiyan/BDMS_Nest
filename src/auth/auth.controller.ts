@@ -14,6 +14,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { GoogleOauthGuard } from './guards/google-oauth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
@@ -81,6 +82,26 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @UseGuards(GoogleOauthGuard)
+  @Get('google')
+  googleAuth() {
+    // Initiates the Google OAuth flow
+  }
+
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @UseGuards(GoogleOauthGuard)
+  @Get('google/callback')
+  googleAuthRedirect(@Req() req: Request) {
+    // The google strategy populates req.user
+    const user = req.user as {
+      providerId: string;
+      email: string;
+      provider: string;
+    };
+    return this.authService.validateOAuthLogin(user);
   }
 
   @ApiBearerAuth('access-token')

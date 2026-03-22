@@ -24,6 +24,34 @@ export class UsersService {
     return this.usersRepo.findByUsername(user_name);
   }
 
+  async findByProviderId(provider_id: string) {
+    return this.usersRepo.findByProviderId(provider_id);
+  }
+
+  async findByEmailInternal(email: string) {
+    return this.usersRepo.findByEmailInternal(email);
+  }
+
+  async linkProvider(id: string, provider: string, provider_id: string) {
+    return this.usersRepo.linkProvider(id, provider, provider_id);
+  }
+
+  async createOAuthUser(data: {
+    email: string;
+    user_name: string;
+    provider: string;
+    provider_id: string;
+    role_id: string;
+  }) {
+    return this.usersRepo.create({
+      email: data.email,
+      user_name: data.user_name,
+      provider: data.provider,
+      provider_id: data.provider_id,
+      role_id: data.role_id,
+    });
+  }
+
   async findById(id: string) {
     const user = await this.usersRepo.findById(id);
 

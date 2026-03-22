@@ -38,6 +38,34 @@ export class UsersRepository {
     });
   }
 
+  async findByEmailInternal(email: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        email,
+        deleted_at: null,
+      },
+      select: this.selectAuthInternal,
+    });
+  }
+
+  async findByProviderId(provider_id: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        provider_id,
+        deleted_at: null,
+      },
+      select: this.selectAuthInternal,
+    });
+  }
+
+  async linkProvider(id: string, provider: string, provider_id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { provider, provider_id },
+      select: this.selectAuthInternal,
+    });
+  }
+
   async findById(id: string) {
     return this.prisma.user.findFirst({
       where: {
