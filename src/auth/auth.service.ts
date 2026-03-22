@@ -149,6 +149,12 @@ export class AuthService {
     }
 
     if (!user.email_verified_at) {
+      console.log('DEBUG: Verification check failed', {
+        id: user.id,
+        email: user.email,
+        verified_at: user.email_verified_at,
+        raw_user: user,
+      });
       throw new UnauthorizedException(
         'Email not verified. Please check your inbox.',
       );

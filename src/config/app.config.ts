@@ -29,6 +29,7 @@ export const validationSchema = Joi.object({
   // Resend (Email)
   RESEND_API_KEY: Joi.string().optional(),
   RESEND_FROM_EMAIL: Joi.string().default('onboarding@resend.dev'),
+  RESEND_TO_EMAIL: Joi.string().optional(),
 });
 
 export default () => ({
@@ -58,5 +59,6 @@ export default () => ({
   resend: {
     apiKey: process.env.RESEND_API_KEY,
     fromEmail: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+    toEmail: process.env.RESEND_TO_EMAIL,
   },
 });

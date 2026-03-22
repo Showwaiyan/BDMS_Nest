@@ -63,6 +63,7 @@ export const USER_AUTH_INTERNAL_SELECT: Prisma.UserSelect = {
   role_id: true,
   hospital_id: true,
   is_active: true,
+  email_verified_at: true,
   created_at: true,
   updated_at: true,
   deleted_at: true,

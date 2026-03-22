@@ -71,4 +71,8 @@ export class AppConfigService {
   get resendFromEmail(): string {
     return this.configService.get<string>('resend.fromEmail')!;
   }
+
+  get resendToEmail(): string | undefined {
+    return this.configService.get<string>('resend.toEmail');
+  }
 }
