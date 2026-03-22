@@ -37,7 +37,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     }
 
     if (!hospital_id) {
-      return done(new BadRequestException('Hospital ID is required in OAuth state'), undefined);
+      return done(
+        new BadRequestException('Hospital ID is required in OAuth state'),
+        undefined,
+      );
     }
 
     const user = {

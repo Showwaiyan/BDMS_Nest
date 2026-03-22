@@ -48,7 +48,11 @@ export class AuthService {
     });
 
     // Send verification email
-    await this.sendVerificationLink(user.email, user.user_name, user.hospital_id);
+    await this.sendVerificationLink(
+      user.email,
+      user.user_name,
+      user.hospital_id,
+    );
 
     return {
       message:
@@ -89,7 +93,10 @@ export class AuthService {
 
     const [email, hospital_id] = value.split(':');
 
-    const user = await this.usersService.findByEmailInternal(email, hospital_id);
+    const user = await this.usersService.findByEmailInternal(
+      email,
+      hospital_id,
+    );
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -114,12 +121,16 @@ export class AuthService {
   }
 
   async resendVerification(email: string, hospital_id: string) {
-    const user = await this.usersService.findByEmailInternal(email, hospital_id);
+    const user = await this.usersService.findByEmailInternal(
+      email,
+      hospital_id,
+    );
 
     if (!user) {
       // Return success even if user doesn't exist for security
       return {
-        message: 'If the account exists, a new verification link has been sent.',
+        message:
+          'If the account exists, a new verification link has been sent.',
       };
     }
 
@@ -308,7 +319,8 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: 'If an account with that email exists, we have sent a password reset link.',
+        message:
+          'If an account with that email exists, we have sent a password reset link.',
         data: null,
       };
     }
@@ -317,7 +329,11 @@ export class AuthService {
     const resetKey = `${this.RESET_PASSWORD_PREFIX}${resetToken}`;
 
     // Store email:hospital_id in Redis with 1 hour TTL
-    await this.redisService.set(resetKey, `${user.email}:${user.hospital_id}`, 3600);
+    await this.redisService.set(
+      resetKey,
+      `${user.email}:${user.hospital_id}`,
+      3600,
+    );
 
     const resetLink = `http://localhost:3001/reset-password?token=${resetToken}`;
 
@@ -328,9 +344,10 @@ export class AuthService {
     );
 
     return {
-        message: 'If an account with that email exists, we have sent a password reset link.',
-        data: null,
-      };
+      message:
+        'If an account with that email exists, we have sent a password reset link.',
+      data: null,
+    };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -343,7 +360,10 @@ export class AuthService {
 
     const [email, hospital_id] = value.split(':');
 
-    const user = await this.usersService.findByEmailInternal(email, hospital_id);
+    const user = await this.usersService.findByEmailInternal(
+      email,
+      hospital_id,
+    );
     if (!user) {
       throw new BadRequestException('User not found');
     }

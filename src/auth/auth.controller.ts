@@ -202,11 +202,9 @@ export class AuthController {
     );
     const { access_token, refresh_token } = authResult.data;
 
-    const frontendUrl =
-      this.appConfig.frontendOauthCallbackUrl ||
-      'http://localhost:3001/oauth-success';
+    const frontendUrl = this.appConfig.frontendUrl || 'http://localhost:3001';
     return res.redirect(
-      `${frontendUrl}?access_token=${access_token}&refresh_token=${refresh_token}`,
+      `${frontendUrl}/oauth-success?access_token=${access_token}&refresh_token=${refresh_token}`,
     );
   }
 
