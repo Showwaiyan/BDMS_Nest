@@ -18,6 +18,8 @@ import { GoogleOauthGuard } from './guards/google-oauth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import {
   AuthUserLoginResponseDataDto,
@@ -62,6 +64,45 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent if user exists',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Password reset email sent successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @ApiOperation({ summary: 'Reset password using a token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+    schema: {
+      properties: {
+        success: { example: true },
+        statusCode: { example: 200 },
+        message: { example: 'Password reset successfully' },
+        data: { $ref: getSchemaPath(MessageResponseDto) },
+        timestamp: { example: '2026-03-22T10:30:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @ApiOperation({ summary: 'User login' })

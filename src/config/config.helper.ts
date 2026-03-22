@@ -62,4 +62,13 @@ export class AppConfigService {
   get googleCallbackUrl(): string | undefined {
     return this.configService.get<string>('google.callbackUrl');
   }
+
+  // Resend (Email)
+  get resendApiKey(): string | undefined {
+    return this.configService.get<string>('resend.apiKey');
+  }
+
+  get resendFromEmail(): string {
+    return this.configService.get<string>('resend.fromEmail')!;
+  }
 }

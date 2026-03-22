@@ -12,14 +12,23 @@ import { TokenBlacklistService } from './token-blacklist.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/logint.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { MailService } from '../mail/mail.service';
+import { RedisService } from '../common/services/redis.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly RESET_PASSWORD_PREFIX = 'reset-password:';
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private appConfig: AppConfigService,
     private tokenBlacklistService: TokenBlacklistService,
+    private mailService: MailService,
+    private redisService: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -36,9 +45,68 @@ export class AuthService {
       role_id: userRole.id,
     });
 
+    // Send welcome email (non-blocking)
+    void this.mailService.sendWelcomeEmail(user.email, user.user_name);
+
     return {
       message: 'User registered successfully',
       data: user,
+    };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.usersService.findByEmailInternal(dto.email);
+
+    if (!user) {
+      // Return success even if user doesn't exist for security (don't leak users)
+      return {
+        message:
+          'If an account with that email exists, we have sent a password reset link.',
+      };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetKey = `${this.RESET_PASSWORD_PREFIX}${resetToken}`;
+
+    // Store in Redis with 1 hour TTL
+    await this.redisService.set(resetKey, user.email, 3600);
+
+    // TODO: Change this to your actual frontend reset link
+    const resetLink = `http://localhost:3001/reset-password?token=${resetToken}`;
+
+    void this.mailService.sendPasswordResetEmail(
+      user.email,
+      user.user_name,
+      resetLink,
+    );
+
+    return {
+      message:
+        'If an account with that email exists, we have sent a password reset link.',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const resetKey = `${this.RESET_PASSWORD_PREFIX}${dto.token}`;
+    const email = await this.redisService.get(resetKey);
+
+    if (!email) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const user = await this.usersService.findByEmailInternal(email);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    // Delete the token
+    await this.redisService.del(resetKey);
+
+    return {
+      message: 'Password has been reset successfully',
     };
   }
 

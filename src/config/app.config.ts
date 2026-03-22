@@ -25,6 +25,10 @@ export const validationSchema = Joi.object({
   GOOGLE_CLIENT_ID: Joi.string().optional(),
   GOOGLE_CLIENT_SECRET: Joi.string().optional(),
   GOOGLE_CALLBACK_URL: Joi.string().uri().optional(),
+
+  // Resend (Email)
+  RESEND_API_KEY: Joi.string().optional(),
+  RESEND_FROM_EMAIL: Joi.string().default('onboarding@resend.dev'),
 });
 
 export default () => ({
@@ -50,5 +54,9 @@ export default () => ({
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+  },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
   },
 });

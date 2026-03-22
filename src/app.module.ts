@@ -14,6 +14,7 @@ import appConfig, { validationSchema } from './config/app.config';
 import { AppConfigModule } from './config/module.config';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { CertificatesModule } from './certificates/certificates.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CertificatesModule } from './certificates/certificates.module';
       },
     }),
     AppConfigModule,
+    MailModule,
     UsersModule,
     RequestsModule,
     DonationsModule,
