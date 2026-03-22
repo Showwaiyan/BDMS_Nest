@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Body, UseGuards, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  Res,
+  Query,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,7 +16,7 @@ import {
   ApiExtraModels,
   getSchemaPath,
 } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -30,6 +39,7 @@ import {
   MessageResponseDto,
 } from './dto/auth-responses.dto';
 import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import { AppConfigService } from '../config/config.helper';
 
 @ApiTags('auth')
 @ApiExtraModels(
@@ -45,6 +55,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   @ApiOperation({ summary: 'Register a new user' })
@@ -165,7 +176,9 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @ApiOperation({ summary: 'Initiate Google OAuth login (must provide hospital_id in query)' })
+  @ApiOperation({
+    summary: 'Initiate Google OAuth login (must provide hospital_id in query)',
+  })
   @UseGuards(GoogleOauthGuard)
   @Get('google')
   googleAuth(@Query('hospital_id') hospital_id: string) {
@@ -175,7 +188,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   @UseGuards(GoogleOauthGuard)
   @Get('google/callback')
-  googleAuthRedirect(@Req() req: Request) {
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     // The google strategy populates req.user
     const user = req.user as {
       providerId: string;
@@ -183,7 +196,18 @@ export class AuthController {
       provider: string;
       hospital_id: string; // Extracted from state by strategy
     };
-    return this.authService.validateOAuthLogin(user, user.hospital_id);
+    const authResult = await this.authService.validateOAuthLogin(
+      user,
+      user.hospital_id,
+    );
+    const { access_token, refresh_token } = authResult.data;
+
+    const frontendUrl =
+      this.appConfig.frontendOauthCallbackUrl ||
+      'http://localhost:3001/oauth-success';
+    return res.redirect(
+      `${frontendUrl}?access_token=${access_token}&refresh_token=${refresh_token}`,
+    );
   }
 
   @ApiBearerAuth('access-token')
