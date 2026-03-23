@@ -21,8 +21,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decortor';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestedUser } from '../common/interfaces/requested-user.interface';
-import { Permissions } from 'src/auth/decorators/permissions.decorator';
-import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @ApiTags('requests')
 @UseGuards(JwtAuthGuard, PermissionsGuard)

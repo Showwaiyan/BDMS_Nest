@@ -18,7 +18,7 @@ import {
   BloodGroup,
   UrgencyLevel,
   RequestStatus,
-} from 'prisma/generated/client';
+} from '../../prisma/generated/client';
 
 describe('RequestsService', () => {
   let service: RequestsService;

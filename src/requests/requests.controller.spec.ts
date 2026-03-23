@@ -9,7 +9,7 @@ import {
   RequestStatus,
   BloodGroup,
   UrgencyLevel,
-} from 'prisma/generated/client';
+} from '../../prisma/generated/client';
 import { RequestedUser } from '../common/interfaces/requested-user.interface';
 
 describe('RequestsController', () => {

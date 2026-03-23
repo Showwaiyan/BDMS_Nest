@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import * as requestedUserInterface from '../../common/interfaces/requested-user.interface';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
