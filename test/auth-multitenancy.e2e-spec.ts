@@ -32,13 +32,8 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
 
     // Get seeded hospital IDs
     const hospitals = await prisma.hospital.findMany();
-    console.log(
-      'HOSPITALS:',
-      hospitals.map((h) => ({ id: h.id, name: h.name })),
-    );
     hospitalAId = hospitals.find((h) => h.name === 'Hospital A')?.id;
     hospitalBId = hospitals.find((h) => h.name === 'Hospital B')?.id;
-    console.log('IDs:', { hospitalAId, hospitalBId });
   });
 
   afterAll(async () => {
