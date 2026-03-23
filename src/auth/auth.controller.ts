@@ -181,8 +181,9 @@ export class AuthController {
   })
   @UseGuards(GoogleOauthGuard)
   @Get('google')
-  googleAuth(@Query('hospital_id') hospital_id: string) {
+  googleAuth(@Query('hospital_id') _hospital_id: string) {
     // Initiates the Google OAuth flow
+    return { _hospital_id };
   }
 
   @ApiOperation({ summary: 'Google OAuth callback' })
