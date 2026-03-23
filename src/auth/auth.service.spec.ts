@@ -27,6 +27,8 @@ describe('AuthService', () => {
     findById: jest.Mock;
     getMe: jest.Mock;
     updatePassword: jest.Mock;
+    checkExistsByEmail: jest.Mock;
+    checkExistsByUsername: jest.Mock;
   };
   let jwtService: {
     signAsync: jest.Mock;
@@ -41,6 +43,8 @@ describe('AuthService', () => {
       findById: jest.fn(),
       getMe: jest.fn(),
       updatePassword: jest.fn(),
+      checkExistsByEmail: jest.fn(),
+      checkExistsByUsername: jest.fn(),
     };
 
     jwtService = {

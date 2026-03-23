@@ -32,8 +32,13 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
 
     // Get seeded hospital IDs
     const hospitals = await prisma.hospital.findMany();
+    console.log(
+      'HOSPITALS:',
+      hospitals.map((h) => ({ id: h.id, name: h.name })),
+    );
     hospitalAId = hospitals.find((h) => h.name === 'Hospital A')?.id;
     hospitalBId = hospitals.find((h) => h.name === 'Hospital B')?.id;
+    console.log('IDs:', { hospitalAId, hospitalBId });
   });
 
   afterAll(async () => {
@@ -144,8 +149,8 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
         .get(`/api/v1/users/${userB?.id}`)
         .set('Authorization', `Bearer ${adminAToken}`);
 
-      // CURRENTLY FAILS: Returns 200 because hospital scoping isn't in findOne yet!
-      expect(res.status).toBe(403);
+      // SHOULD FAIL: Returns 404 because user belongs to a different hospital
+      expect(res.status).toBe(404);
     });
   });
 });

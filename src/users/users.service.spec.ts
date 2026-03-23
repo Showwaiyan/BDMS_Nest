@@ -37,6 +37,7 @@ describe('UsersService', () => {
       findByUsername: jest.fn(),
       findById: jest.fn(),
       findPublicById: jest.fn(),
+      findProfileById: jest.fn(),
       checkExistsByUsername: jest.fn(),
       checkExistsByEmail: jest.fn(),
       create: jest.fn(),
@@ -90,6 +91,29 @@ describe('UsersService', () => {
       usersRepo.findById.mockResolvedValue(user);
 
       await expect(service.findById('user-1')).resolves.toEqual(user);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should throw when user is from a different hospital', async () => {
+      usersRepo.findProfileById.mockResolvedValue({
+        id: 'user-1',
+        hospital_id: 'hosp-2',
+      });
+
+      await expect(service.findOne('user-1', 'hosp-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('should return user when found in same hospital', async () => {
+      const user = { id: 'user-1', hospital_id: 'hosp-1' };
+      usersRepo.findProfileById.mockResolvedValue(user);
+
+      await expect(service.findOne('user-1', 'hosp-1')).resolves.toEqual({
+        message: 'User fetched successfully',
+        data: user,
+      });
     });
   });
 
@@ -209,14 +233,19 @@ describe('UsersService', () => {
     });
 
     it('should update user role successfully', async () => {
-      usersRepo.findById.mockResolvedValue({ id: 'user-1' });
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        hospital_id: 'hosp-1',
+      });
       usersRepo.findRoleByName.mockResolvedValue({ id: 'role-staff' });
       usersRepo.updateById.mockResolvedValue({
         id: 'user-1',
         role_id: 'role-staff',
       });
 
-      await expect(service.updateUserRole('user-1', 'STAFF')).resolves.toEqual({
+      await expect(
+        service.updateUserRole('user-1', 'hosp-1', 'STAFF'),
+      ).resolves.toEqual({
         message: 'User role updated successfully',
         data: { id: 'user-1', role_id: 'role-staff' },
       });
@@ -231,6 +260,7 @@ describe('UsersService', () => {
     it('should toggle active status', async () => {
       usersRepo.findById.mockResolvedValue({
         id: 'user-1',
+        hospital_id: 'hosp-1',
         is_active: true,
       });
       usersRepo.updateById.mockResolvedValue({
@@ -238,7 +268,7 @@ describe('UsersService', () => {
         is_active: false,
       });
 
-      await expect(service.toggleActive('user-1')).resolves.toEqual({
+      await expect(service.toggleActive('user-1', 'hosp-1')).resolves.toEqual({
         message: 'User deactivated successfully',
         data: { id: 'user-1', is_active: false },
       });
@@ -251,10 +281,13 @@ describe('UsersService', () => {
 
   describe('remove', () => {
     it('should soft delete existing user', async () => {
-      usersRepo.findById.mockResolvedValue({ id: 'user-1' });
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        hospital_id: 'hosp-1',
+      });
       usersRepo.softDelete.mockResolvedValue({ id: 'user-1' });
 
-      await expect(service.remove('user-1')).resolves.toEqual({
+      await expect(service.remove('user-1', 'hosp-1')).resolves.toEqual({
         message: 'User deleted successfully',
         data: null,
       });
