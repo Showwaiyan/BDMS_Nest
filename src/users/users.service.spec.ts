@@ -19,7 +19,8 @@ describe('UsersService', () => {
     findRoleByName: jest.Mock;
     findByUsername: jest.Mock;
     findById: jest.Mock;
-    findPublicById: jest.Mock;
+    findProfileById: jest.Mock;
+    findMeProfile: jest.Mock;
     checkExistsByUsername: jest.Mock;
     checkExistsByEmail: jest.Mock;
     create: jest.Mock;
@@ -28,6 +29,8 @@ describe('UsersService', () => {
     updateById: jest.Mock;
     updatePassword: jest.Mock;
     softDelete: jest.Mock;
+    getStatsSummary: jest.Mock;
+    getStatsByRole: jest.Mock;
   };
   const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
@@ -36,8 +39,8 @@ describe('UsersService', () => {
       findRoleByName: jest.fn(),
       findByUsername: jest.fn(),
       findById: jest.fn(),
-      findPublicById: jest.fn(),
       findProfileById: jest.fn(),
+      findMeProfile: jest.fn(),
       checkExistsByUsername: jest.fn(),
       checkExistsByEmail: jest.fn(),
       create: jest.fn(),
@@ -46,6 +49,8 @@ describe('UsersService', () => {
       updateById: jest.fn(),
       updatePassword: jest.fn(),
       softDelete: jest.fn(),
+      getStatsSummary: jest.fn(),
+      getStatsByRole: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -114,6 +119,14 @@ describe('UsersService', () => {
         message: 'User fetched successfully',
         data: user,
       });
+    });
+
+    it('should throw when user does not exist', async () => {
+      usersRepo.findProfileById.mockResolvedValue(null);
+
+      await expect(service.findOne('missing', 'hosp-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -228,7 +241,7 @@ describe('UsersService', () => {
       usersRepo.findRoleByName.mockResolvedValue(null);
 
       await expect(
-        service.updateUserRole('user-1', 'STAFF'),
+        service.updateUserRole('user-1', 'hosp-1', 'STAFF'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -277,6 +290,18 @@ describe('UsersService', () => {
         is_active: false,
       });
     });
+
+    it('should throw when user belongs to another hospital', async () => {
+      usersRepo.findById.mockResolvedValue({
+        id: 'user-1',
+        hospital_id: 'hosp-2',
+        is_active: true,
+      });
+
+      await expect(
+        service.toggleActive('user-1', 'hosp-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   describe('remove', () => {
@@ -293,6 +318,85 @@ describe('UsersService', () => {
       });
 
       expect(usersRepo.softDelete).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('findStaffByHospital', () => {
+    it('should return paginated staff list', async () => {
+      const data = [{ id: 'staff-1', hospital_id: 'h1' }];
+      usersRepo.findManyByCriteria.mockResolvedValue(data);
+      usersRepo.count.mockResolvedValue(1);
+
+      const result = await service.findStaffByHospital('h1', {
+        page: 1,
+        limit: 10,
+        search: 'staff',
+      });
+
+      expect(usersRepo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hospital_id: 'h1',
+          role: { name: 'STAFF' },
+        }),
+        0,
+        10,
+      );
+      expect(result.message).toBe('Staff users fetched successfully');
+      expect(result.data.data).toEqual(data);
+    });
+  });
+
+  describe('findAllPatients', () => {
+    it('should return paginated patient list', async () => {
+      const data = [{ id: 'patient-1', hospital_id: 'h1' }];
+      usersRepo.findManyByCriteria.mockResolvedValue(data);
+      usersRepo.count.mockResolvedValue(1);
+
+      const result = await service.findAllPatients(
+        { page: 2, limit: 5, search: 'user' },
+        'h1',
+      );
+
+      expect(usersRepo.findManyByCriteria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hospital_id: 'h1',
+          role: { name: 'USER' },
+        }),
+        5,
+        5,
+      );
+      expect(result.message).toBe('Users fetched successfully');
+      expect(result.data.data).toEqual(data);
+    });
+  });
+
+  describe('getMe', () => {
+    it('should throw when profile not found', async () => {
+      usersRepo.findMeProfile.mockResolvedValue(null);
+
+      await expect(service.getMe('user-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('stats', () => {
+    it('getStatsSummary should return wrapped data', async () => {
+      usersRepo.getStatsSummary.mockResolvedValue({ total: 10 });
+
+      await expect(service.getStatsSummary('h1')).resolves.toEqual({
+        message: 'User statistics fetched successfully',
+        data: { total: 10 },
+      });
+    });
+
+    it('getStatsByRole should return wrapped data', async () => {
+      usersRepo.getStatsByRole.mockResolvedValue({ ADMIN: { count: 2 } });
+
+      await expect(service.getStatsByRole('h1')).resolves.toEqual({
+        message: 'Statistics by role fetched successfully',
+        data: { ADMIN: { count: 2 } },
+      });
     });
   });
 });

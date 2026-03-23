@@ -4,7 +4,6 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DatabaseService } from '../src/database/database.service';
 import { ConfigModule } from '@nestjs/config';
-import * as path from 'path';
 
 describe('Auth & Multi-Tenancy (Integration)', () => {
   let app: INestApplication;
@@ -85,13 +84,13 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
         .send({ ...userData, user_name: 'different_name' });
 
       expect(res.status).toBe(400); // Bad Request (from our new validation)
-      expect(res.body.message).toContain('Email already registered');
+      const registerBody = res.body as { message: string };
+      expect(registerBody.message).toContain('Email already registered');
     });
   });
 
   describe('Cross-Hospital Security', () => {
     let adminAToken: string;
-    let adminBToken: string;
 
     beforeAll(async () => {
       // Login as Admin A (Seeded: admin@hospitalA.com / admin123)
@@ -101,23 +100,26 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
         data: { email_verified_at: new Date() },
       });
 
-      const loginA = await request(app.getHttpServer())
+      const loginARes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
           user_name: 'admin_hospitalA',
           password: 'admin123',
           hospital_id: hospitalAId,
         });
-      adminAToken = loginA.body.data.access_token;
+      const loginA = loginARes.body as { data: { access_token: string } };
+      adminAToken = loginA.data.access_token;
 
-      const loginB = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          user_name: 'admin_hospitalB',
-          password: 'admin123',
-          hospital_id: hospitalBId,
-        });
-      adminBToken = loginB.body.data.access_token;
+      await request(app.getHttpServer()).post('/api/v1/auth/login').send({
+        user_name: 'admin_hospitalB',
+        password: 'admin123',
+        hospital_id: hospitalBId,
+      });
+    });
+
+    it('should return 401 for protected users routes without token', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/users');
+      expect(res.status).toBe(401);
     });
 
     it('should only return staff from the admins own hospital', async () => {
@@ -126,10 +128,13 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
         .set('Authorization', `Bearer ${adminAToken}`);
 
       expect(res.status).toBe(200);
-      const staff = res.body.data.data;
+      const staffBody = res.body as {
+        data: { data: Array<{ hospital_id: string }> };
+      };
+      const staff = staffBody.data.data;
 
       // Verify all returned staff belong to Hospital A
-      staff.forEach((member: any) => {
+      staff.forEach((member) => {
         expect(member.hospital_id).toBe(hospitalAId);
       });
     });
@@ -146,6 +151,24 @@ describe('Auth & Multi-Tenancy (Integration)', () => {
 
       // SHOULD FAIL: Returns 404 because user belongs to a different hospital
       expect(res.status).toBe(404);
+    });
+
+    it('should block USER role from ADMIN-only stats route', async () => {
+      const loginUserRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          user_name: 'user_hospitalA',
+          password: 'user123',
+          hospital_id: hospitalAId,
+        });
+      const loginUser = loginUserRes.body as { data: { access_token: string } };
+      const userToken = loginUser.data.access_token;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/users/stats/summary')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).toBe(403);
     });
   });
 });
