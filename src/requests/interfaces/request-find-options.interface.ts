@@ -1,4 +1,4 @@
-import { RequestStatus } from 'prisma/generated/client';
+import { RequestStatus } from '../../prisma/generated/client';
 
 /**
  * Interface for internal service lookup options.

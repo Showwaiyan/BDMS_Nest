@@ -1,4 +1,4 @@
-import { Prisma } from 'prisma/generated/client';
+import { Prisma } from '../../prisma/generated/client';
 
 /**
  * ID only - minimal select for ID-only operations

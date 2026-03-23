@@ -22,9 +22,9 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Roles } from 'src/auth/decorators/roles.decortor';
-import { Permissions } from 'src/auth/decorators/permissions.decorator';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decortor';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import {
   UserProfileResponseDto,

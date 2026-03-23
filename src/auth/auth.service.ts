@@ -33,6 +33,26 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    // Check if email already exists in this specific hospital
+    const existingEmail = await this.usersService.checkExistsByEmail(
+      dto.email,
+      dto.hospital_id,
+    );
+    if (existingEmail) {
+      throw new BadRequestException(
+        'Email already registered in this hospital',
+      );
+    }
+
+    // Check if username already exists in this specific hospital
+    const existingUsername = await this.usersService.checkExistsByUsername(
+      dto.user_name,
+      dto.hospital_id,
+    );
+    if (existingUsername) {
+      throw new BadRequestException('Username already taken in this hospital');
+    }
+
     // Find the default 'USER' role
     const userRole = await this.usersService.findRoleByName('USER');
     if (!userRole) {

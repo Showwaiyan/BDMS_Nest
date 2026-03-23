@@ -1,12 +1,12 @@
 import { IsEnum, IsOptional, IsString, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
 import {
   BloodGroup,
   RequestStatus,
   UrgencyLevel,
-} from 'prisma/generated/client';
+} from '../../../../prisma/generated/client';
 
 export class RequestsQueryDto extends PaginationDto {
   @ApiPropertyOptional({

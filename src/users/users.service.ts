@@ -66,12 +66,24 @@ export class UsersService {
 
   // internal use only - no response formatting or error handling here
   // for reducing db payload size
-  async checkExistsByUsername(user_name: string, hospital_id: string) {
-    return this.usersRepo.checkExistsByUsername(user_name, hospital_id);
+  async checkExistsByUsername(
+    user_name: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
+    return this.usersRepo.checkExistsByUsername(
+      user_name,
+      hospital_id,
+      excludeId,
+    );
   }
 
-  async checkExistsByEmail(email: string, hospital_id: string) {
-    return this.usersRepo.checkExistsByEmail(email, hospital_id);
+  async checkExistsByEmail(
+    email: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
+    return this.usersRepo.checkExistsByEmail(email, hospital_id, excludeId);
   }
 
   async create(dto: CreateUserDto) {
