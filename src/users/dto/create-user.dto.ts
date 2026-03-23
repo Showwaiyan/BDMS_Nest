@@ -25,7 +25,7 @@ export class CreateUserDto {
   @IsUUID()
   role_id: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsUUID()
-  hospital_id?: string;
+  hospital_id: string;
 }

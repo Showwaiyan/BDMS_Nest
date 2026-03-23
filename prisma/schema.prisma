@@ -132,17 +132,20 @@ model RolePermission {
 model User {
   id          String   @id @default(uuid())
   role_id     String
-  hospital_id String?
-  user_name   String   @unique
-  email       String   @unique
-  password    String
+  hospital_id String
+  user_name   String
+  email       String
+  password    String?
+  provider    String?
+  provider_id String?
   is_active   Boolean  @default(true)
+  email_verified_at DateTime?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   deleted_at  DateTime?
 
   role     Role      @relation(fields: [role_id], references: [id])
-  hospital Hospital? @relation(fields: [hospital_id], references: [id])
+  hospital Hospital  @relation(fields: [hospital_id], references: [id])
 
   donor           Donor?
   donations       Donation[]     @relation("DonationCreator")
@@ -152,6 +155,10 @@ model User {
   appointments    Appointment[]
   certificates    Certificate[]
   screened_records MedicalRecord[]
+
+  @@unique([user_name, hospital_id])
+  @@unique([email, hospital_id])
+  @@unique([provider_id, hospital_id])
 }
 
 model Donor {

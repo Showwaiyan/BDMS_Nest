@@ -17,27 +17,72 @@ async function main() {
   const roles = ['ADMIN', 'STAFF', 'USER'];
   const permissions = [
     // Users
-    'user.access', 'user.create', 'user.update', 'user.delete', 'user.view',
+    'user.access',
+    'user.create',
+    'user.update',
+    'user.delete',
+    'user.view',
     // Roles
-    'role.access', 'role.create', 'role.update', 'role.delete', 'role.view',
+    'role.access',
+    'role.create',
+    'role.update',
+    'role.delete',
+    'role.view',
     // Permissions
-    'permission.access', 'permission.create', 'permission.update', 'permission.delete', 'permission.view',
+    'permission.access',
+    'permission.create',
+    'permission.update',
+    'permission.delete',
+    'permission.view',
     // Donors
-    'donor.access', 'donor.create', 'donor.update', 'donor.delete', 'donor.view',
+    'donor.access',
+    'donor.create',
+    'donor.update',
+    'donor.delete',
+    'donor.view',
     // Donations
-    'donation.access', 'donation.create', 'donation.update', 'donation.delete', 'donation.view',
+    'donation.access',
+    'donation.create',
+    'donation.update',
+    'donation.delete',
+    'donation.view',
     // Blood Requests
-    'request.access', 'request.create', 'request.update', 'request.view', 'request.delete',
+    'request.access',
+    'request.create',
+    'request.update',
+    'request.view',
+    'request.delete',
     // Appointments
-    'appointment.access', 'appointment.create', 'appointment.update', 'appointment.delete', 'appointment.view',
+    'appointment.access',
+    'appointment.create',
+    'appointment.update',
+    'appointment.delete',
+    'appointment.view',
     // Medical Records
-    'medical.access', 'medical.create', 'medical.update', 'medical.view', 'medical.delete',
+    'medical.access',
+    'medical.create',
+    'medical.update',
+    'medical.view',
+    'medical.delete',
     // Announcements
-    'announcement.access', 'announcement.create', 'announcement.update', 'announcement.delete', 'announcement.view',
+    'announcement.access',
+    'announcement.create',
+    'announcement.update',
+    'announcement.delete',
+    'announcement.view',
     // Inventory
-    'inventory.access', 'inventory.create', 'inventory.update', 'inventory.delete', 'inventory.view', 'inventory.manage',
+    'inventory.access',
+    'inventory.create',
+    'inventory.update',
+    'inventory.delete',
+    'inventory.view',
+    'inventory.manage',
     // Certificates
-    'certificate.access', 'certificate.create', 'certificate.update', 'certificate.delete', 'certificate.view', 'certificate.issue'
+    'certificate.access',
+    'certificate.create',
+    'certificate.update',
+    'certificate.delete',
+    'certificate.view',
   ];
 
   // Create Roles
@@ -65,10 +110,17 @@ async function main() {
   // Link Permissions
   if (adminRole) {
     for (const permName of permissions) {
-      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      const perm = await prisma.permission.findUnique({
+        where: { name: permName },
+      });
       if (perm) {
         await prisma.rolePermission.upsert({
-          where: { role_id_permission_id: { role_id: adminRole.id, permission_id: perm.id } },
+          where: {
+            role_id_permission_id: {
+              role_id: adminRole.id,
+              permission_id: perm.id,
+            },
+          },
           update: {},
           create: { role_id: adminRole.id, permission_id: perm.id },
         });
@@ -78,20 +130,51 @@ async function main() {
 
   if (staffRole) {
     const staffPerms = [
-      'user.view', 'donor.access', 'donor.view', 'donor.update',
-      'donation.access', 'donation.view', 'donation.update',
-      'request.access', 'request.view', 'request.update',
-      'appointment.access', 'appointment.view', 'appointment.update',
-      'medical.access', 'medical.create', 'medical.update', 'medical.view',
-      'announcement.access', 'announcement.view', 'announcement.update',
-      'inventory.access', 'inventory.view', 'inventory.manage',
-      'certificate.access', 'certificate.view', 'certificate.issue'
+      'user.access',
+      'user.view',
+      'donor.access',
+      'donor.create',
+      'donor.view',
+      'donor.update',
+      'donation.access',
+      'donation.create',
+      'donation.view',
+      'donation.update',
+      'request.access',
+      'request.create',
+      'request.view',
+      'request.update',
+      'appointment.access',
+      'appointment.view',
+      'appointment.update',
+      'medical.access',
+      'medical.create',
+      'medical.update',
+      'medical.view',
+      'announcement.access',
+      'announcement.view',
+      'announcement.update',
+      'inventory.access',
+      'inventory.view',
+      'inventory.manage',
+      'certificate.access',
+      'certificate.create',
+      'certificate.view',
+      'certificate.update',
+      'certificate.delete',
     ];
     for (const permName of staffPerms) {
-      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      const perm = await prisma.permission.findUnique({
+        where: { name: permName },
+      });
       if (perm) {
         await prisma.rolePermission.upsert({
-          where: { role_id_permission_id: { role_id: staffRole.id, permission_id: perm.id } },
+          where: {
+            role_id_permission_id: {
+              role_id: staffRole.id,
+              permission_id: perm.id,
+            },
+          },
           update: {},
           create: { role_id: staffRole.id, permission_id: perm.id },
         });
@@ -101,14 +184,28 @@ async function main() {
 
   if (userRole) {
     const userPerms = [
-      'donor.create', 'donor.view', 'user.view', 'appointment.view', 'donation.view',
-      'request.create', 'request.view', 'announcement.view', 'certificate.view'
+      'donor.create',
+      'donor.view',
+      'user.view',
+      'appointment.view',
+      'donation.view',
+      'request.create',
+      'request.view',
+      'announcement.view',
+      'certificate.view',
     ];
     for (const permName of userPerms) {
-      const perm = await prisma.permission.findUnique({ where: { name: permName } });
+      const perm = await prisma.permission.findUnique({
+        where: { name: permName },
+      });
       if (perm) {
         await prisma.rolePermission.upsert({
-          where: { role_id_permission_id: { role_id: userRole.id, permission_id: perm.id } },
+          where: {
+            role_id_permission_id: {
+              role_id: userRole.id,
+              permission_id: perm.id,
+            },
+          },
           update: {},
           create: { role_id: userRole.id, permission_id: perm.id },
         });
@@ -116,40 +213,159 @@ async function main() {
     }
   }
 
+  console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating hospitals...');
+
+  const hospitalA = await prisma.hospital.upsert({
+    where: { email: 'hospitalA@bdms.com' },
+    update: {},
+    create: {
+      name: 'Hospital A',
+      address: '123 Main Street, Yangon',
+      phone: '09111111111',
+      email: 'hospitalA@bdms.com',
+    },
+  });
+
+  const hospitalB = await prisma.hospital.upsert({
+    where: { email: 'hospitalB@bdms.com' },
+    update: {},
+    create: {
+      name: 'Hospital B',
+      address: '456 Second Street, Mandalay',
+      phone: '09222222222',
+      email: 'hospitalB@bdms.com',
+    },
+  });
+
   console.log('ᡕᠵデᡁ᠊╾━ ✷ Creating accounts...');
 
   const passwordAdmin = await bcrypt.hash('admin123', 10);
+  const passwordStaff = await bcrypt.hash('staff123', 10);
   const passwordUser = await bcrypt.hash('user123', 10);
 
+  // ADMIN — Hospital A
   if (adminRole) {
     await prisma.user.upsert({
-      where: { email: 'admin@example.com' },
+      where: {
+        email_hospital_id: {
+          email: 'admin@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
       update: {},
       create: {
-        user_name: 'admin',
-        email: 'admin@example.com',
+        user_name: 'admin_hospitalA',
+        email: 'admin@hospitalA.com',
         password: passwordAdmin,
         role_id: adminRole.id,
+        hospital_id: hospitalA.id,
         is_active: true,
       },
     });
-  }
 
-  if (userRole) {
+    // ADMIN — Hospital B
     await prisma.user.upsert({
-      where: { email: 'user@example.com' },
+      where: {
+        email_hospital_id: {
+          email: 'admin@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
       update: {},
       create: {
-        user_name: 'user',
-        email: 'user@example.com',
-        password: passwordUser,
-        role_id: userRole.id,
+        user_name: 'admin_hospitalB',
+        email: 'admin@hospitalB.com',
+        password: passwordAdmin,
+        role_id: adminRole.id,
+        hospital_id: hospitalB.id,
         is_active: true,
       },
     });
   }
 
-  console.log('💀 Successfully seeded roles, permissions and accounts.');
+  // STAFF — Hospital A
+  if (staffRole) {
+    await prisma.user.upsert({
+      where: {
+        email_hospital_id: {
+          email: 'staff@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
+      update: {},
+      create: {
+        user_name: 'staff_hospitalA',
+        email: 'staff@hospitalA.com',
+        password: passwordStaff,
+        role_id: staffRole.id,
+        hospital_id: hospitalA.id,
+        is_active: true,
+      },
+    });
+
+    // STAFF — Hospital B
+    await prisma.user.upsert({
+      where: {
+        email_hospital_id: {
+          email: 'staff@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
+      update: {},
+      create: {
+        user_name: 'staff_hospitalB',
+        email: 'staff@hospitalB.com',
+        password: passwordStaff,
+        role_id: staffRole.id,
+        hospital_id: hospitalB.id,
+        is_active: true,
+      },
+    });
+  }
+
+  // USER (donor) — Hospital A
+  if (userRole) {
+    await prisma.user.upsert({
+      where: {
+        email_hospital_id: {
+          email: 'user@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
+      update: {},
+      create: {
+        user_name: 'user_hospitalA',
+        email: 'user@hospitalA.com',
+        password: passwordUser,
+        role_id: userRole.id,
+        hospital_id: hospitalA.id,
+        is_active: true,
+      },
+    });
+
+    // USER (donor) — Hospital B
+    await prisma.user.upsert({
+      where: {
+        email_hospital_id: {
+          email: 'user@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
+      update: {},
+      create: {
+        user_name: 'user_hospitalB',
+        email: 'user@hospitalB.com',
+        password: passwordUser,
+        role_id: userRole.id,
+        hospital_id: hospitalB.id,
+        is_active: true,
+      },
+    });
+  }
+
+  console.log(
+    '💀 Successfully seeded hospitals, roles, permissions and accounts.',
+  );
 
   console.log('\n🌱 Seeding completed!');
 }
