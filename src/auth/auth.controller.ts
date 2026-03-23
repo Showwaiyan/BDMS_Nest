@@ -25,7 +25,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleOauthGuard } from './guards/google-oauth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { LoginDto } from './dto/logint.dto';
+import { LoginDto } from './dto/login.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -38,7 +38,7 @@ import {
   AuthUserProfileResponseDataDto,
   MessageResponseDto,
 } from './dto/auth-responses.dto';
-import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
 import { AppConfigService } from '../config/config.helper';
 
 @ApiTags('auth')

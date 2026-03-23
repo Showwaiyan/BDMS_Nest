@@ -16,6 +16,8 @@ import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { MailModule } from './mail/mail.module';
 
+import { HospitalsModule } from './hospitals/hospitals.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -39,6 +41,7 @@ import { MailModule } from './mail/mail.module';
     DatabaseModule,
     MedicalRecordsModule,
     CertificatesModule,
+    HospitalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

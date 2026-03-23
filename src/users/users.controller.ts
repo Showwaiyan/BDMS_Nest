@@ -32,7 +32,7 @@ import {
   UserStatsByRoleResponseDto,
   PaginatedUsersResponseDto,
 } from './dto/user-responses.dto';
-import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 

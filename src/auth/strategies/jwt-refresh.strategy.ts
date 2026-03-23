@@ -5,7 +5,7 @@ import type { Request } from 'express';
 import { AppConfigService } from '../../config/config.helper';
 import { DatabaseService } from '../../database/database.service';
 import { TokenBlacklistService } from '../token-blacklist.service';
-import { RequestedUser } from 'src/common/interfaces/requested-user.interface';
+import { RequestedUser } from '../../common/interfaces/requested-user.interface';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
