@@ -4,6 +4,9 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfigService } from '../config/config.helper';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { MailService } from '../mail/mail.service';
+import { RedisService } from '../common/services/redis.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -23,6 +26,18 @@ describe('AuthController', () => {
         },
         {
           provide: AppConfigService,
+          useValue: {},
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: {},
+        },
+        {
+          provide: MailService,
+          useValue: {},
+        },
+        {
+          provide: RedisService,
           useValue: {},
         },
       ],

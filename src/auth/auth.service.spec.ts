@@ -3,6 +3,9 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfigService } from '../config/config.helper';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { MailService } from '../mail/mail.service';
+import { RedisService } from '../common/services/redis.service';
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -22,7 +25,7 @@ describe('AuthService', () => {
     create: jest.Mock;
     findByUsername: jest.Mock;
     findById: jest.Mock;
-    findOne: jest.Mock;
+    getMe: jest.Mock;
     updatePassword: jest.Mock;
   };
   let jwtService: {
@@ -36,7 +39,7 @@ describe('AuthService', () => {
       create: jest.fn(),
       findByUsername: jest.fn(),
       findById: jest.fn(),
-      findOne: jest.fn(),
+      getMe: jest.fn(),
       updatePassword: jest.fn(),
     };
 
@@ -64,6 +67,27 @@ describe('AuthService', () => {
             jwtRefreshExpiresIn: '30d',
           },
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: {
+            blacklist: jest.fn(),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendVerificationEmail: jest.fn(),
+            sendWelcomeEmail: jest.fn(),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: {
+            set: jest.fn(),
+            get: jest.fn(),
+            del: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -77,12 +101,18 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should create user with USER role', async () => {
       usersService.findRoleByName.mockResolvedValue({ id: 'role-user-id' });
-      usersService.create.mockResolvedValue({ id: 'new-user-id' });
+      usersService.create.mockResolvedValue({
+        id: 'new-user-id',
+        email: 'john@example.com',
+        user_name: 'john',
+        hospital_id: 'hosp-1',
+      });
 
       const result = await service.register({
         user_name: 'john',
         email: 'john@example.com',
         password: 'password123',
+        hospital_id: 'hosp-1',
       });
 
       expect(usersService.findRoleByName).toHaveBeenCalledWith('USER');
@@ -91,10 +121,13 @@ describe('AuthService', () => {
         email: 'john@example.com',
         password: 'password123',
         role_id: 'role-user-id',
+        hospital_id: 'hosp-1',
       });
-      expect(result).toEqual({
-        message: 'User registered successfully',
-        data: { id: 'new-user-id' },
+      expect(result.data).toEqual({
+        id: 'new-user-id',
+        user_name: 'john',
+        email: 'john@example.com',
+        hospital_id: 'hosp-1',
       });
     });
 
@@ -106,6 +139,7 @@ describe('AuthService', () => {
           user_name: 'john',
           email: 'john@example.com',
           password: 'password123',
+          hospital_id: 'hosp-1',
         }),
       ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
@@ -118,7 +152,8 @@ describe('AuthService', () => {
       email: 'john@example.com',
       password: 'hashed-password',
       is_active: true,
-      hospital_id: null,
+      email_verified_at: new Date(),
+      hospital_id: 'hosp-1',
       role: {
         name: 'USER',
         role_permissions: [
@@ -132,7 +167,11 @@ describe('AuthService', () => {
       usersService.findByUsername.mockResolvedValue(null);
 
       await expect(
-        service.login({ user_name: 'unknown', password: '123456' }),
+        service.login({
+          user_name: 'unknown',
+          password: '123456',
+          hospital_id: 'hosp-1',
+        }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
@@ -143,7 +182,11 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.login({ user_name: 'john', password: '123456' }),
+        service.login({
+          user_name: 'john',
+          password: '123456',
+          hospital_id: 'hosp-1',
+        }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
@@ -152,7 +195,11 @@ describe('AuthService', () => {
       mockedBcrypt.compare.mockResolvedValueOnce(false as never);
 
       await expect(
-        service.login({ user_name: 'john', password: 'wrong-password' }),
+        service.login({
+          user_name: 'john',
+          password: 'wrong-password',
+          hospital_id: 'hosp-1',
+        }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
@@ -166,6 +213,7 @@ describe('AuthService', () => {
       const result = await service.login({
         user_name: 'john',
         password: 'password123',
+        hospital_id: 'hosp-1',
       });
 
       expect(jwtService.signAsync).toHaveBeenCalledTimes(2);
@@ -177,7 +225,7 @@ describe('AuthService', () => {
             user_name: 'john',
             email: 'john@example.com',
             role: 'USER',
-            hospital_id: undefined,
+            hospital_id: 'hosp-1',
           },
           access_token: 'access-token',
           refresh_token: 'refresh-token',
