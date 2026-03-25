@@ -17,8 +17,6 @@ import { CertificatesModule } from './certificates/certificates.module';
 import { MailModule } from './mail/mail.module';
 import { HospitalsModule } from './hospitals/hospitals.module';
 
-import { HospitalsModule } from './hospitals/hospitals.module';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
