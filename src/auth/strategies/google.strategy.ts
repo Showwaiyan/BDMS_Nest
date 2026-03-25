@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { AppConfigService } from '../../config/config.helper';
+import { Request } from 'express';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -15,23 +16,23 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
-  async validate(
-    req: any,
-    accessToken: string,
-    refreshToken: string,
+  validate(
+    req: Request,
+    _accessToken: string,
+    _refreshToken: string,
     profile: import('passport-google-oauth20').Profile,
     done: VerifyCallback,
   ) {
     const { emails, id } = profile;
-    const { state } = req.query;
+    const state = req.query.state;
 
     let hospital_id: string | undefined;
 
-    if (state) {
+    if (state && typeof state === 'string') {
       try {
-        const parsedState = JSON.parse(state);
+        const parsedState = JSON.parse(state) as { hospital_id?: string };
         hospital_id = parsedState.hospital_id;
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }

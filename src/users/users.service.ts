@@ -66,12 +66,24 @@ export class UsersService {
 
   // internal use only - no response formatting or error handling here
   // for reducing db payload size
-  async checkExistsByUsername(user_name: string, hospital_id: string) {
-    return this.usersRepo.checkExistsByUsername(user_name, hospital_id);
+  async checkExistsByUsername(
+    user_name: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
+    return this.usersRepo.checkExistsByUsername(
+      user_name,
+      hospital_id,
+      excludeId,
+    );
   }
 
-  async checkExistsByEmail(email: string, hospital_id: string) {
-    return this.usersRepo.checkExistsByEmail(email, hospital_id);
+  async checkExistsByEmail(
+    email: string,
+    hospital_id: string,
+    excludeId?: string,
+  ) {
+    return this.usersRepo.checkExistsByEmail(email, hospital_id, excludeId);
   }
 
   async create(dto: CreateUserDto) {
@@ -169,10 +181,10 @@ export class UsersService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, hospitalId: string) {
     const user = await this.usersRepo.findProfileById(id);
 
-    if (!user) {
+    if (!user || user.hospital_id !== hospitalId) {
       throw new NotFoundException('User not found');
     }
 
@@ -233,21 +245,30 @@ export class UsersService {
     return this.usersRepo.updateById(id, data);
   }
 
-  async updateUserRole(id: string, role: 'USER' | 'STAFF' | 'ADMIN') {
-    await this.findById(id); // throws if not found
+  async updateUserRole(
+    id: string,
+    hospitalId: string,
+    role: 'USER' | 'STAFF' | 'ADMIN',
+  ) {
+    const user = await this.findById(id); // throws if not found
+
+    if (user.hospital_id !== hospitalId) {
+      throw new NotFoundException('User not found');
+    }
+
     const roleRecord = await this.usersRepo.findRoleByName(role);
 
     if (!roleRecord) {
       throw new NotFoundException('Role not found');
     }
 
-    const user = await this.usersRepo.updateById(id, {
+    const updatedUser = await this.usersRepo.updateById(id, {
       role_id: roleRecord.id,
     });
 
     return {
       message: 'User role updated successfully',
-      data: user,
+      data: updatedUser,
     };
   }
 
@@ -257,8 +278,12 @@ export class UsersService {
     await this.usersRepo.updatePassword(id, hashedPassword);
   }
 
-  async toggleActive(id: string) {
+  async toggleActive(id: string, hospitalId: string) {
     const user = await this.findById(id);
+
+    if (user.hospital_id !== hospitalId) {
+      throw new NotFoundException('User not found');
+    }
 
     const updated = await this.usersRepo.updateById(id, {
       is_active: !user.is_active,
@@ -270,8 +295,12 @@ export class UsersService {
     };
   }
 
-  async remove(id: string) {
-    await this.findById(id); // throws if not found
+  async remove(id: string, hospitalId: string) {
+    const user = await this.findById(id); // throws if not found
+
+    if (user.hospital_id !== hospitalId) {
+      throw new NotFoundException('User not found');
+    }
 
     await this.usersRepo.softDelete(id);
 

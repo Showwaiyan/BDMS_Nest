@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { DatabaseService } from '../../database/database.service';
 import { AppConfigService } from '../../config/config.helper';
-import { RequestedUser } from 'src/common/interfaces/requested-user.interface';
+import { RequestedUser } from '../../common/interfaces/requested-user.interface';
 import { TokenBlacklistService } from '../token-blacklist.service';
 
 @Injectable()

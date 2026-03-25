@@ -8,9 +8,9 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { BloodGroup, UrgencyLevel } from 'prisma/generated/client';
+import { BloodGroup, UrgencyLevel } from '../../../prisma/generated/client';
 
-import { IsFutureDate } from 'src/common/decorators/is-future-date.decorator';
+import { IsFutureDate } from '../../common/decorators/is-future-date.decorator';
 
 export class CreateRequestDto {
   @ApiProperty({

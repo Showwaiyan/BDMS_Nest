@@ -21,8 +21,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decortor';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestedUser } from '../common/interfaces/requested-user.interface';
-import { Permissions } from 'src/auth/decorators/permissions.decorator';
-import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @ApiTags('requests')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -72,7 +72,15 @@ export class RequestsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: RequestedUser,
   ) {
-    return this.requestsService.findOne(id, user.hospital_id);
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.requestsService.findOne(
+      id,
+      user.id,
+      user.hospital_id,
+      user.role,
+    );
   }
 
   // Accept or Reject blood request
@@ -97,6 +105,7 @@ export class RequestsController {
       user.hospital_id,
     );
   }
+
   // Approve a pending blood request
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'STAFF')

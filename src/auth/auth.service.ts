@@ -10,7 +10,7 @@ import { UsersService } from '../users/users.service';
 import { AppConfigService } from '../config/config.helper';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/logint.dto';
+import { LoginDto } from './dto/login.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../common/services/redis.service';
@@ -33,6 +33,26 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    // Check if email already exists in this specific hospital
+    const existingEmail = await this.usersService.checkExistsByEmail(
+      dto.email,
+      dto.hospital_id,
+    );
+    if (existingEmail) {
+      throw new BadRequestException(
+        'Email already registered in this hospital',
+      );
+    }
+
+    // Check if username already exists in this specific hospital
+    const existingUsername = await this.usersService.checkExistsByUsername(
+      dto.user_name,
+      dto.hospital_id,
+    );
+    if (existingUsername) {
+      throw new BadRequestException('Username already taken in this hospital');
+    }
+
     // Find the default 'USER' role
     const userRole = await this.usersService.findRoleByName('USER');
     if (!userRole) {
@@ -380,15 +400,20 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    const user = await this.usersService.getMe(userId);
+    const userResult = await this.usersService.getMe(userId);
 
-    if (!user) {
+    if (!userResult || !userResult.data) {
       throw new UnauthorizedException('User not found');
     }
 
+    const user = userResult.data;
+
     return {
       message: 'User profile retrieved successfully',
-      data: user,
+      data: {
+        ...user,
+        role: user.role.name, // Flatten role to string
+      },
     };
   }
 

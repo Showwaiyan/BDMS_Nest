@@ -22,9 +22,9 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Roles } from 'src/auth/decorators/roles.decortor';
-import { Permissions } from 'src/auth/decorators/permissions.decorator';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decortor';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import {
   UserProfileResponseDto,
@@ -32,7 +32,7 @@ import {
   UserStatsByRoleResponseDto,
   PaginatedUsersResponseDto,
 } from './dto/user-responses.dto';
-import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -177,11 +177,17 @@ export class UsersController {
     description: 'Forbidden - requires user.view permission',
   })
   @UseGuards(RolesGuard)
-  @Roles('ADMIN, STAFF')
+  @Roles('ADMIN', 'STAFF')
   @Permissions('user.view')
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  findOne(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Param('id') id: string,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.findOne(id, user.hospital_id);
   }
 
   @ApiOperation({ summary: 'Update current user profile' })
@@ -213,8 +219,15 @@ export class UsersController {
   @Roles('ADMIN')
   @Permissions('role.update')
   @Patch(':id/role')
-  updateRole(@Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
-    return this.usersService.updateUserRole(id, dto.role);
+  updateRole(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.updateUserRole(id, user.hospital_id, dto.role);
   }
 
   @ApiOperation({ summary: 'Toggle user active status (ADMIN/STAFF)' })
@@ -231,8 +244,14 @@ export class UsersController {
   @Roles('ADMIN', 'STAFF')
   @Permissions('user.update')
   @Patch(':id/toggle-active')
-  toggleActive(@Param('id') id: string) {
-    return this.usersService.toggleActive(id);
+  toggleActive(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Param('id') id: string,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.toggleActive(id, user.hospital_id);
   }
 
   @ApiOperation({ summary: 'Delete user (soft delete, ADMIN only)' })
@@ -246,7 +265,13 @@ export class UsersController {
   @Roles('ADMIN')
   @Permissions('user.delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @CurrentUser() user: requestedUserInterface.RequestedUser,
+    @Param('id') id: string,
+  ) {
+    if (!user.hospital_id) {
+      throw new ForbiddenException('You are not assigned to any hospital');
+    }
+    return this.usersService.remove(id, user.hospital_id);
   }
 }

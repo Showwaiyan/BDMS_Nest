@@ -5,6 +5,7 @@ import {
   Body,
   UseGuards,
   Req,
+  Res,
   Query,
 } from '@nestjs/common';
 import {
@@ -15,7 +16,7 @@ import {
   ApiExtraModels,
   getSchemaPath,
 } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -24,7 +25,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { GoogleOauthGuard } from './guards/google-oauth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { LoginDto } from './dto/logint.dto';
+import { LoginDto } from './dto/login.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -37,7 +38,8 @@ import {
   AuthUserProfileResponseDataDto,
   MessageResponseDto,
 } from './dto/auth-responses.dto';
-import * as requestedUserInterface from 'src/common/interfaces/requested-user.interface';
+import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
+import { AppConfigService } from '../config/config.helper';
 
 @ApiTags('auth')
 @ApiExtraModels(
@@ -53,6 +55,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   @ApiOperation({ summary: 'Register a new user' })
@@ -178,14 +181,15 @@ export class AuthController {
   })
   @UseGuards(GoogleOauthGuard)
   @Get('google')
-  googleAuth(@Query('hospital_id') hospital_id: string) {
+  googleAuth(@Query('hospital_id') _hospital_id: string) {
     // Initiates the Google OAuth flow
+    return { _hospital_id };
   }
 
   @ApiOperation({ summary: 'Google OAuth callback' })
   @UseGuards(GoogleOauthGuard)
   @Get('google/callback')
-  googleAuthRedirect(@Req() req: Request) {
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     // The google strategy populates req.user
     const user = req.user as {
       providerId: string;
@@ -193,7 +197,16 @@ export class AuthController {
       provider: string;
       hospital_id: string; // Extracted from state by strategy
     };
-    return this.authService.validateOAuthLogin(user, user.hospital_id);
+    const authResult = await this.authService.validateOAuthLogin(
+      user,
+      user.hospital_id,
+    );
+    const { access_token, refresh_token } = authResult.data;
+
+    const frontendUrl = this.appConfig.frontendUrl || 'http://localhost:3001';
+    return res.redirect(
+      `${frontendUrl}/oauth-success?access_token=${access_token}&refresh_token=${refresh_token}`,
+    );
   }
 
   @ApiBearerAuth('access-token')

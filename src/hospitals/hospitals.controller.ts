@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { HospitalsService } from './hospitals.service';
 
 @ApiTags('hospitals')
@@ -7,10 +7,15 @@ import { HospitalsService } from './hospitals.service';
 export class HospitalsController {
   constructor(private readonly hospitalsService: HospitalsService) {}
 
-  @ApiOperation({ summary: 'Get a list of all active hospitals' })
-  @ApiResponse({ status: 200, description: 'Return all hospitals' })
+  @ApiOperation({ summary: 'Get all hospitals' })
   @Get()
-  async findAll() {
+  findAll() {
     return this.hospitalsService.findAll();
+  }
+
+  @ApiOperation({ summary: 'Get hospital by ID' })
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.hospitalsService.findOne(id);
   }
 }
