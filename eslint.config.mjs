@@ -1,6 +1,7 @@
 // @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import jestPlugin from 'eslint-plugin-jest';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -32,4 +33,12 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
-);
+  {
+    files: ["**/*.spec.ts"],
+    plugins: { jest: jestPlugin },
+    rules: {
+      "@typescript-eslint/unbound-method": "off",
+      "jest/unbound-method": "error",
+    },
+  },
+); 

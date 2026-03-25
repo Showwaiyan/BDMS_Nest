@@ -40,4 +40,43 @@ export class AppConfigService {
     return (this.configService.get<string>('jwt.refreshExpiresIn') ||
       '30d') as StringValue;
   }
+
+  // Redis
+  get upstashRedisRestUrl(): string | undefined {
+    return this.configService.get<string>('redis.restUrl');
+  }
+
+  get upstashRedisRestToken(): string | undefined {
+    return this.configService.get<string>('redis.restToken');
+  }
+
+  // Google OAuth
+  get googleClientId(): string | undefined {
+    return this.configService.get<string>('google.clientId');
+  }
+
+  get googleClientSecret(): string | undefined {
+    return this.configService.get<string>('google.clientSecret');
+  }
+
+  get googleCallbackUrl(): string | undefined {
+    return this.configService.get<string>('google.callbackUrl');
+  }
+
+  get frontendUrl(): string | undefined {
+    return this.configService.get<string>('google.frontendUrl');
+  }
+
+  // Resend (Email)
+  get resendApiKey(): string | undefined {
+    return this.configService.get<string>('resend.apiKey');
+  }
+
+  get resendFromEmail(): string {
+    return this.configService.get<string>('resend.fromEmail')!;
+  }
+
+  get resendToEmail(): string | undefined {
+    return this.configService.get<string>('resend.toEmail');
+  }
 }

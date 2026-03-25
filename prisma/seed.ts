@@ -246,7 +246,12 @@ async function main() {
   // ADMIN — Hospital A
   if (adminRole) {
     await prisma.user.upsert({
-      where: { email: 'admin@hospitalA.com' },
+      where: {
+        email_hospital_id: {
+          email: 'admin@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'admin_hospitalA',
@@ -260,7 +265,12 @@ async function main() {
 
     // ADMIN — Hospital B
     await prisma.user.upsert({
-      where: { email: 'admin@hospitalB.com' },
+      where: {
+        email_hospital_id: {
+          email: 'admin@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'admin_hospitalB',
@@ -276,7 +286,12 @@ async function main() {
   // STAFF — Hospital A
   if (staffRole) {
     await prisma.user.upsert({
-      where: { email: 'staff@hospitalA.com' },
+      where: {
+        email_hospital_id: {
+          email: 'staff@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'staff_hospitalA',
@@ -290,7 +305,12 @@ async function main() {
 
     // STAFF — Hospital B
     await prisma.user.upsert({
-      where: { email: 'staff@hospitalB.com' },
+      where: {
+        email_hospital_id: {
+          email: 'staff@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'staff_hospitalB',
@@ -306,7 +326,12 @@ async function main() {
   // USER (donor) — Hospital A
   if (userRole) {
     await prisma.user.upsert({
-      where: { email: 'user@hospitalA.com' },
+      where: {
+        email_hospital_id: {
+          email: 'user@hospitalA.com',
+          hospital_id: hospitalA.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'user_hospitalA',
@@ -320,7 +345,12 @@ async function main() {
 
     // USER (donor) — Hospital B
     await prisma.user.upsert({
-      where: { email: 'user@hospitalB.com' },
+      where: {
+        email_hospital_id: {
+          email: 'user@hospitalB.com',
+          hospital_id: hospitalB.id,
+        },
+      },
       update: {},
       create: {
         user_name: 'user_hospitalB',
