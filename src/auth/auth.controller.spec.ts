@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfigService } from '../config/config.helper';
 import type { Request } from 'express';
+import type { RequestedUser } from '../common/interfaces/requested-user.interface';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -116,7 +117,14 @@ describe('AuthController', () => {
   it('refresh should pass current user id', async () => {
     authService.refreshToken.mockResolvedValue({ message: 'ok' });
 
-    await controller.refresh({ id: 'user-1' } as any);
+    const mockUser: RequestedUser = {
+      id: 'user-1',
+      user_name: 'testuser',
+      role: 'user',
+      permissions: [],
+    };
+
+    await controller.refresh(mockUser);
 
     expect(authService.refreshToken).toHaveBeenCalledWith('user-1');
   });
@@ -124,7 +132,14 @@ describe('AuthController', () => {
   it('getProfile should pass current user id', async () => {
     authService.getMe.mockResolvedValue({ message: 'ok' });
 
-    await controller.getProfile({ id: 'user-1' } as any);
+    const mockUser: RequestedUser = {
+      id: 'user-1',
+      user_name: 'testuser',
+      role: 'user',
+      permissions: [],
+    };
+
+    await controller.getProfile(mockUser);
 
     expect(authService.getMe).toHaveBeenCalledWith('user-1');
   });

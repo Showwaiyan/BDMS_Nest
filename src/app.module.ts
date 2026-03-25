@@ -15,7 +15,6 @@ import { AppConfigModule } from './config/module.config';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { MailModule } from './mail/mail.module';
-
 import { HospitalsModule } from './hospitals/hospitals.module';
 
 @Module({
