@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DatabaseService } from '../src/database/database.service';
 import { ConfigModule } from '@nestjs/config';
 
 describe('Auth & Multi-Tenancy (Integration)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
   let prisma: DatabaseService;
   let hospitalAId: string;
   let hospitalBId: string;

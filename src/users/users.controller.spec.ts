@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import type { RequestedUser } from '../common/interfaces/requested-user.interface';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -50,13 +51,28 @@ describe('UsersController', () => {
   });
 
   it('findAll should throw when current user has no hospital', () => {
-    expect(() =>
-      controller.findAll({ id: 'u1' } as any, { page: 1, limit: 10 }),
-    ).toThrow(ForbiddenException);
+    const mockUser: RequestedUser = {
+      id: 'u1',
+      user_name: 'testuser',
+      role: 'user',
+      permissions: [],
+    };
+
+    expect(() => controller.findAll(mockUser, { page: 1, limit: 10 })).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('findAll should call service with hospital scope', async () => {
-    await controller.findAll({ id: 'u1', hospital_id: 'h1' } as any, {
+    const mockUser: RequestedUser = {
+      id: 'u1',
+      user_name: 'testuser',
+      role: 'user',
+      permissions: [],
+      hospital_id: 'h1',
+    };
+
+    await controller.findAll(mockUser, {
       page: 1,
       limit: 10,
     });
@@ -68,16 +84,27 @@ describe('UsersController', () => {
   });
 
   it('getMe should call usersService.getMe', async () => {
-    await controller.getMe({ id: 'u1' } as any);
+    const mockUser: RequestedUser = {
+      id: 'u1',
+      user_name: 'testuser',
+      role: 'user',
+      permissions: [],
+    };
+
+    await controller.getMe(mockUser);
     expect(usersService.getMe).toHaveBeenCalledWith('u1');
   });
 
   it('updateRole should call service with hospital and role', async () => {
-    await controller.updateRole(
-      { id: 'admin-1', hospital_id: 'h1' } as any,
-      'u2',
-      { role: 'STAFF' },
-    );
+    const mockUser: RequestedUser = {
+      id: 'admin-1',
+      user_name: 'admin',
+      role: 'admin',
+      permissions: [],
+      hospital_id: 'h1',
+    };
+
+    await controller.updateRole(mockUser, 'u2', { role: 'STAFF' });
 
     expect(usersService.updateUserRole).toHaveBeenCalledWith(
       'u2',
@@ -87,7 +114,15 @@ describe('UsersController', () => {
   });
 
   it('remove should call service with hospital scope', async () => {
-    await controller.remove({ id: 'admin-1', hospital_id: 'h1' } as any, 'u2');
+    const mockUser: RequestedUser = {
+      id: 'admin-1',
+      user_name: 'admin',
+      role: 'admin',
+      permissions: [],
+      hospital_id: 'h1',
+    };
+
+    await controller.remove(mockUser, 'u2');
 
     expect(usersService.remove).toHaveBeenCalledWith('u2', 'h1');
   });

@@ -19,7 +19,11 @@ export class HospitalsService {
       const cachedStr = await this.redis.get(this.CACHE_KEY);
       if (cachedStr) {
         this.logger.debug('Returning hospitals from cache');
-        return JSON.parse(cachedStr);
+        const cachedData = JSON.parse(cachedStr) as {
+          messages: string;
+          data: any[];
+        };
+        return cachedData;
       }
     } catch (e) {
       this.logger.warn('Failed to read hospitals from cache', e);
@@ -44,17 +48,32 @@ export class HospitalsService {
       },
     });
 
+    const response = {
+      messages: 'Fetched hospitals successfully',
+      data: hospitals,
+    };
+
     // 3. Save to cache
     try {
       await this.redis.set(
         this.CACHE_KEY,
-        JSON.stringify(hospitals),
+        JSON.stringify(response),
         this.CACHE_TTL,
       );
     } catch (e) {
       this.logger.warn('Failed to save hospitals to cache', e);
     }
 
-    return hospitals;
+    return response;
+  }
+
+  async findOne(id: string) {
+    const hospital = await this.db.hospital.findUnique({
+      where: { id },
+    });
+    return {
+      message: 'Hospital fetched successfully',
+      data: hospital,
+    };
   }
 }
