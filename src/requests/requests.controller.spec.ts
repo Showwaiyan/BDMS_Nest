@@ -5,11 +5,7 @@ import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { RequestsQueryDto } from './dto/query/requests.dto';
-import {
-  RequestStatus,
-  BloodGroup,
-  UrgencyLevel,
-} from '../../prisma/generated/client';
+import { RequestStatus, BloodGroup, UrgencyLevel } from '@prisma/client';
 import { RequestedUser } from '../common/interfaces/requested-user.interface';
 
 describe('RequestsController', () => {

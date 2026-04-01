@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../prisma/generated/client';
+import { Prisma } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import {
   USER_ID_ONLY_SELECT,

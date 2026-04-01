@@ -14,11 +14,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as requestCodeHelper from '../common/helpers/request-code.helper';
 
 import { RequestedUser } from '../common/interfaces/requested-user.interface';
-import {
-  BloodGroup,
-  UrgencyLevel,
-  RequestStatus,
-} from '../../prisma/generated/client';
+import { BloodGroup, UrgencyLevel, RequestStatus } from '@prisma/client';
 
 describe('RequestsService', () => {
   let service: RequestsService;

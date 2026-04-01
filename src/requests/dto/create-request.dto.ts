@@ -8,7 +8,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { BloodGroup, UrgencyLevel } from '../../../prisma/generated/client';
+import { BloodGroup, UrgencyLevel } from '@prisma/client';
 
 import { IsFutureDate } from '../../common/decorators/is-future-date.decorator';
 

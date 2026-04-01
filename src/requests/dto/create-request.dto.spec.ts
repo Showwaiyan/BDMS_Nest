@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { CreateRequestDto } from './create-request.dto';
-import { BloodGroup, UrgencyLevel } from '../../../prisma/generated/client';
+import { BloodGroup, UrgencyLevel } from '@prisma/client';
 
 describe('CreateRequestDto', () => {
   let dto: CreateRequestDto;

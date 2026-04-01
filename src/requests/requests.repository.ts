@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { Prisma, RequestStatus } from '../../prisma/generated/client';
+import { Prisma, RequestStatus } from '@prisma/client';
 
 @Injectable()
 export class RequestsRepository {
