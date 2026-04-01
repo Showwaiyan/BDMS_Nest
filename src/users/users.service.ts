@@ -8,7 +8,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '../../prisma/generated/client';
+import { Prisma } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersRepository } from './users.repository';
 

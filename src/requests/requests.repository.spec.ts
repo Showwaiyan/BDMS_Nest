@@ -1,11 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RequestsRepository } from './requests.repository';
 import { DatabaseService } from '../database/database.service';
-import {
-  RequestStatus,
-  BloodGroup,
-  UrgencyLevel,
-} from '../../prisma/generated/client';
+import { RequestStatus, BloodGroup, UrgencyLevel } from '@prisma/client';
 
 describe('RequestsRepository', () => {
   let repository: RequestsRepository;

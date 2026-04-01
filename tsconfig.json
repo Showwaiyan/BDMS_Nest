@@ -22,7 +22,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "prisma/generated/client": ["./prisma/generated/client"]
+      "@prisma/client": ["./prisma/generated/client"]
     }
   }
 }

@@ -8,7 +8,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { RequestsQueryDto } from './dto/query/requests.dto';
 import { paginate, paginatedResult } from '../common/helpers/paginate.helper';
-import { Prisma, RequestStatus } from '../../prisma/generated/client';
+import { Prisma, RequestStatus } from '@prisma/client';
 import type { RequestedUser } from '../common/interfaces/requested-user.interface';
 import { generateRequestCode } from '../common/helpers/request-code.helper';
 import { RequestFindOptions } from './interfaces/request-find-options.interface';
