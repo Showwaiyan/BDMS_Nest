@@ -10,7 +10,7 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { QueryAppointmentDto } from './dto/query-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
-import { AppointmentStatus, Prisma } from 'prisma/generated/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
 import * as requestedUserInterface from '../common/interfaces/requested-user.interface';
 
 @Injectable()

@@ -1,5 +1,5 @@
 import { IsOptional, IsUUID, IsEnum, IsDateString } from 'class-validator';
-import { AppointmentStatus } from 'prisma/generated/client';
+import { AppointmentStatus } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class QueryAppointmentDto extends PaginationDto {
